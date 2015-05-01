@@ -1,0 +1,16 @@
+<configuration xmlns:ccg="/fw/ccg/XMLBeanParser">
+	<!--  
+	<dataSource ccg:beanType="org.apache.commons.dbcp2.BasicDataSource">
+		<driverClassName>com.mysql.jdbc.Driver</driverClassName>
+		<url>jdbc:mysql://localhost:3306/test</url>
+		<username>kranthi</username>
+		<password>kranthi</password>
+	</dataSource>
+	-->
+	<dataSource ccg:beanType="org.apache.commons.dbcp2.BasicDataSource">
+		<driverClassName>org.apache.derby.jdbc.EmbeddedDriver</driverClassName>
+		<url>jdbc:derby:.\db\testDB;create=true</url>
+	</dataSource>
+</configuration>
+
+	

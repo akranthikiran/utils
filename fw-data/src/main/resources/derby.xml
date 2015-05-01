@@ -1,0 +1,181 @@
+<configuration xmlns:ccg="/fw/ccg/XMLBeanParser">
+	
+	<template name="checkSequenceTemplate"><![CDATA[
+		 SELECT CURRENTVALUE FROM SYS.SYSSEQUENCES WHERE SEQUENCENAME='${name}'
+	]]></template>	
+
+	<template name="createSequenceTemplate"><![CDATA[
+		 CREATE SEQUENCE ${name}
+	]]></template>	
+
+	<template name="createTableTemplate"><![CDATA[
+		CREATE TABLE ${query.tableName}
+		(
+			<#list query.tableStructure.columns as column>
+				<@trim><#assign columnType>${column.typeName}</#assign>
+				
+				<#if columnType == "STRING">
+					<#assign dataType="VARCHAR(${column.length?c})">
+				<#elseif columnType == "INT">
+					<#assign dataType="INT">
+				<#elseif columnType == "LONG">
+					<#assign dataType="BIGINT">
+				<#elseif columnType == "FLOAT">
+					<#assign dataType="FLOAT">
+				<#elseif columnType == "DOUBLE">
+					<#assign dataType="DOUBLE">
+				<#elseif columnType == "DATE_TIME">
+					<#assign dataType="TIMESTAMP">
+				<#elseif columnType == "DATE">
+					<#assign dataType="DATE">
+				<#elseif columnType == "BOOLEAN">
+					<#assign dataType="BOOLEAN">
+				<#else>
+					<#assign dataType>${column.typeName}</#assign>
+				</#if>
+				
+				<#if column.idField>
+					<#assign constraint>PRIMARY KEY </#assign>
+				<#else>
+					<#assign constraint></#assign>
+				</#if>
+				
+				<#if !column.nullable>
+					<#assign constraint>${constraint} NOT NULL </#assign>
+				</#if>
+				
+				<#if column.autoIncrement>
+					<#assign constraint>${constraint} GENERATED ALWAYS AS IDENTITY (START WITH 1, INCREMENT BY 1) </#assign>
+				</#if>
+				
+				<#assign comma></#assign>
+				
+				<#if column_has_next>
+					<#assign comma>,</#assign>
+				<#elseif query.tableStructure.constraintsAvailable>
+					<#assign comma>,</#assign>
+				</#if>
+				
+				${column.name}		${dataType}			${constraint}</@trim>${comma}
+			</#list>
+			
+			<#list query.tableStructure.uniqueConstraints as constraint>
+				<@trim><#assign comma></#assign>
+				
+				<#if constraint_has_next>
+					<#assign comma>,</#assign>
+				<#elseif query.tableStructure.foreignConstraintsAvailable>
+					<#assign comma>,</#assign>
+				</#if>
+				
+				CONSTRAINT ${constraint.name} UNIQUE (<#list constraint.columns as column>${column}<#if column_has_next>,</#if></#list>) ${comma}</@trim>
+			</#list>
+			
+			<#list query.tableStructure.foreignConstraints as constraint>
+				CONSTRAINT ${constraint.name} FOREIGN KEY (<#list constraint.columns as column>${column}<#if column_has_next>,</#if></#list>) 
+					REFERENCES  ${constraint.parentTable} (<#list constraint.parentColumns as column>${column}<#if column_has_next>,</#if></#list>) <#if constraint_has_next>,</#if>
+			</#list>
+		)
+	]]></template>	
+
+	<template name="createIndexTemplate"><![CDATA[
+		CREATE INDEX ${query.indexName} ON ${query.tableName}(<#list query.columns as column>${column}<#if column_has_next>,</#if></#list>)
+	]]></template>	
+
+	<template name="saveTemplate"><![CDATA[
+		INSERT INTO ${query.tableName}(<#list query.columns as column>${column.name}<#if column_has_next>,</#if></#list>)
+		VALUES (<#list query.columns as column><#if column.sequenceGenerated>NEXT VALUE FOR ${column.sequence}<#else>?</#if><#if column_has_next>,</#if></#list>)
+	]]></template>	
+
+	<template name="updateTemplate"><![CDATA[
+		UPDATE ${query.tableName}
+		SET <#list query.columns as column>${column.name} = ?<#if column_has_next>,</#if>
+		</#list>WHERE <#list query.conditions as condition>${condition.column} ${condition.operator} ?
+		<#if condition_has_next>AND </#if></#list>
+	]]></template>	
+
+	<template name="deleteTemplate"><![CDATA[
+		DELETE FROM ${query.tableName}
+		WHERE 1 = 1
+		<#list query.conditions as condition>AND ${condition.column} ${condition.operator} ?</#list>
+	]]></template>	
+
+	<template name="deleteChildren"><![CDATA[
+		DELETE FROM ${query.childTableName}
+		WHERE (<#list query.childColumns as column>${column}<#if column_has_next>, </#if></#list>)
+			IN (SELECT <#list query.parentColumns as column>${column}<#if column_has_next>, </#if></#list>
+				FROM ${query.parentTableName}
+				WHERE 1 = 1
+				<#list query.parentConditions as condition>AND ${condition.column} ${condition.operator} ?</#list>
+			)
+		<#list query.childConditions as condition>AND ${condition.column} ${condition.operator} ?</#list>
+	]]></template>	
+
+	<template name="childrenExistenceTemplate"><![CDATA[
+		SELECT COUNT(*)
+		FROM ${query.childTableName}
+		WHERE (<#list query.childColumns as column>${column}<#if column_has_next>, </#if></#list>)
+			IN (SELECT <#list query.parentColumns as column>${column}<#if column_has_next>, </#if></#list>
+				FROM ${query.parentTableName}
+				WHERE 1 = 1
+				<#list query.parentConditions as condition>AND ${condition.column} ${condition.operator} ?</#list>
+			)
+		<#list query.childConditions as condition>AND ${condition.column} ${condition.operator} ?</#list>
+	]]></template>	
+
+	<template name="fetchChildrenIdsTemplate"><![CDATA[
+		SELECT ${query.childIdColumn}
+		FROM ${query.childTableName}
+		WHERE (<#list query.childColumns as column>${column}<#if column_has_next>, </#if></#list>)
+			IN (SELECT <#list query.parentColumns as column>${column}<#if column_has_next>, </#if></#list>
+				FROM ${query.parentTableName}
+				WHERE 1 = 1
+				<#list query.parentConditions as condition>AND ${condition.column} ${condition.operator} ?</#list>
+			)
+		<#list query.childConditions as condition>AND ${condition.column} ${condition.operator} ?</#list>
+	]]></template>	
+
+	<template name="finderTemplate"><![CDATA[
+		SELECT <#list query.columns as column>${column}<#if column_has_next>,</#if></#list>
+		FROM ${query.tableName}
+		WHERE 1 = 1
+		<#list query.conditions as condition>AND ${condition.column} ${condition.operator} ?
+		</#list>
+	]]></template>	
+
+	<template name="existenceTemplate"><![CDATA[
+		SELECT COUNT(*)
+		FROM ${query.tableName}
+		WHERE 1 = 1
+		<#list query.conditions as condition>
+			AND ${condition.column} ${condition.operator} ?
+		</#list>
+	]]></template>	
+
+	<template name="auditEntryTemplate"><![CDATA[
+		INSERT INTO ${query.auditTableName}(<#list query.columns as column>${column}<#if column_has_next>,</#if></#list>, <#list query.auditColumns as column>${column.name}<#if column_has_next>,</#if></#list>)
+		SELECT <#list query.columns as column>${column}<#if column_has_next>,</#if></#list>, <#list query.auditColumns as column>?<#if column_has_next>,</#if></#list>
+		FROM ${query.tableName}
+		WHERE 1 = 1
+		<#list query.conditions as condition>AND ${condition.column} ${condition.operator} ?</#list>
+	]]></template>	
+
+	<template name="clearAuditTemplate"><![CDATA[
+		DELETE FROM ${auditDetails.tableName}
+		WHERE ${auditDetails.timeColumn} <= <@param name="tillDate"/>
+	]]></template>	
+
+	<template name="fetchAuditEntriesTemplate"><![CDATA[
+		SELECT * FROM ${auditDetails.tableName}
+		WHERE 1 = 1
+		<#if query.fromDate??>AND ${auditDetails.timeColumn} >= <@param name="query.fromDate"/></#if>
+		<#if query.toDate??>AND ${auditDetails.timeColumn} <= <@param name="query.toDate"/></#if>
+		<#if query.entityId??>AND ${entityDetails.idField.column} = <@param name="query.entityId"/></#if>
+		<#if query.auditType??>AND ${auditDetails.typeColumn} = <@param name="query.auditTypeName"/></#if>
+		<#if query.changedBy??>AND ${auditDetails.changedByColumn} = <@param name="query.changedBy"/></#if>
+		ORDER BY ${auditDetails.idColumn} ASC
+	]]></template>	
+
+</configuration>
+
+

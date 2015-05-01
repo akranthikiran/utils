@@ -1,0 +1,40 @@
+Make the common queries into single xml and other template xml file should extend this xml
+	This will reduce code repetetion in derby and mysql example
+	The child xml should be able to override default queries
+		Mostly bean parser will take care of this overriding
+		
+Finder queries should be able to support bean return
+	The return bean will have configuration (annotation) indicating fields to return
+	The input conditions also should be supported and ConditionBean annotation
+	
+Support for search queries
+	should be able to support child bean columns
+	should be able to support all types of joins with child tables (can this be taken from entity itself?)
+	
+Transaction management should be moved outside data store
+	query executor should initiate transaction
+	transaction should be passed to data-store methods
+	transaction wrapping (for step level commits) should be genralized
+	
+	Idea is every data store need not worry about transaction handling, it is genralized
+	
+
+[DeleteQueryExecutor] Child deletion should use its corresponding repository, so that grand-childs are deleted first recursively
+[UpdateQueryExecutor] When unique fields are getting updated, make sure unique constraints are not violated
+				//during unique field update might be we have to mandate id is provided as condition
+[DeleteQueryExecutor] Ability to ignore child existence based on global flag (so that underlying DB will take care of delete cascade)
+[UpdateQueryExecutor/SaveQuery] Ability to ignore unique/foreign constraints (let DB take care of constraints)
+
+
+update/insert query methods should accept implicit values for fields
+	This will help is setting some fixed values (like created-on, status) during method execution
+	The value should be able to accept expression to accept dynamic values (such as today's date for created-on etc)
+	
+	Similarly finders/updaters/deleters should be able to accept implicit conditions
+		This will be helpful in writing methods like deleteInactiveJobs()
+
+Audit Entries
+=============
+	Know Problem - during update, if the columns used in conditions are getting updated, the auditing may not be proper
+	Without unique column during addition audit entries are not added properly
+	Fetch Audit entries function should also support conditions and condition fields should be limited to entity fields and audit-entity fields 
