@@ -1,0 +1,72 @@
+.screen
+{
+	border: solid 2px black;
+	padding: 2px;
+	margin-left: 40px;
+}
+
+.heading
+{
+	font: bold 32px Arial;
+	font-weight: bold;
+	margin: 0px;
+}
+
+body
+{
+	font: normal 16px Arial;
+}
+
+.sideHeading
+{
+	font: bold 20px Arial;
+	font-weight: bold;
+	margin: 0px;
+}
+
+.sqlCode
+{
+	border: solid 2px black;
+	font: bold 14px Arial;
+	margin: 10px;
+	padding: 10px;
+	color: black;
+}
+
+.sqlCode_active
+{
+	color: blue;
+}
+
+.sqlCode_text
+{
+	color: red;
+}
+
+.xmlCode
+{
+	border: solid 2px black;
+	font: bold 14px Arial;
+	margin: 10px;
+	padding: 10px;
+	color: black;
+}
+
+.javaCode
+{
+	border: solid 2px black;
+	font: bold 14px Arial;
+	margin: 10px;
+	padding: 10px;
+	color: black;
+}
+
+.sqlCode_active
+{
+	color: blue;
+}
+
+.sqlCode_text
+{
+	color: red;
+}
