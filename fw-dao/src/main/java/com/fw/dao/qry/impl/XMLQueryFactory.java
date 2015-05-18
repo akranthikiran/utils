@@ -7,6 +7,7 @@ import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.fw.dao.qry.ConnectionSource;
 import com.fw.dao.qry.QueryManager;
 import com.fw.dao.qry.TransactionManager;
 
@@ -18,7 +19,12 @@ public class XMLQueryFactory
 
 	public static QueryManager loadFromXML(InputStream is)
 	{
-		XMLQuerySource xmlSource = new XMLQuerySource(is);
+		return loadFromXML(is, null);
+	}
+
+	public static QueryManager loadFromXML(InputStream is, ConnectionSource connectionSource)
+	{
+		XMLQuerySource xmlSource = new XMLQuerySource(is, connectionSource);
 
 		TransactionManager transactionManager = TransactionManager.getTransactionManager(xmlSource.getTransactionManagerName());
 		
@@ -28,7 +34,7 @@ public class XMLQueryFactory
 		return manager;
 	}
 
-	public static QueryManager loadFromXML(String xmlRes, boolean reload)
+	public static QueryManager loadFromXML(String xmlRes, ConnectionSource connectionSource, boolean reload)
 	{
 		QueryManager manager = reload? null: resToManager.get(xmlRes);
 
@@ -38,12 +44,17 @@ public class XMLQueryFactory
 		logger.debug("Started loading resource: " + xmlRes);
 		InputStream is = XMLQueryFactory.class.getResourceAsStream(xmlRes);
 		
-		manager = loadFromXML(is);
+		manager = loadFromXML(is, connectionSource);
 
 		resToManager.put(xmlRes, manager);
 		logger.debug("Loaded XML resource successfully: " + xmlRes);
 
 		return manager;
+	}
+
+	public static QueryManager loadFromXML(String xmlRes, boolean reload)
+	{
+		return loadFromXML(xmlRes, null, reload);
 	}
 
 	public static QueryManager loadFromXML(String xmlRes)

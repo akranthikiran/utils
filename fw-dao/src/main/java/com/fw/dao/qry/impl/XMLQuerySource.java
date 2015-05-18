@@ -50,25 +50,13 @@ public class XMLQuerySource implements QuerySource
 		addDigester(PROP_DATA_DIGESTER, new PropertyBeanDataDigester());
 	}
 
-	public XMLQuerySource(String resource)
+	public XMLQuerySource(InputStream is, ConnectionSource connectionSource)
 	{
 		this();
 
 		try
 		{
-			XMLBeanParser.parse(XMLQuerySource.class.getResourceAsStream(resource), this, new QueryXMLBeanHandler(this));
-		}catch(Exception ex)
-		{
-			throw new IllegalStateException("An error occured while loading resource: " + resource, ex);
-		}
-	}
-
-	public XMLQuerySource(InputStream is)
-	{
-		this();
-
-		try
-		{
+			this.connectionSource = connectionSource;
 			XMLBeanParser.parse(is, this, new QueryXMLBeanHandler(this));
 		}catch(Exception ex)
 		{
