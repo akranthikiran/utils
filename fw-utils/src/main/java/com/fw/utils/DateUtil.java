@@ -1,4 +1,4 @@
-package com.fw.util;
+package com.fw.utils;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
