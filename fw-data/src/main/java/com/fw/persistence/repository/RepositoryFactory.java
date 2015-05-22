@@ -6,6 +6,9 @@ import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import com.fw.persistence.EntityDetails;
 import com.fw.persistence.EntityDetailsFactory;
 import com.fw.persistence.ICrudRepository;
@@ -16,6 +19,8 @@ import com.fw.persistence.annotations.Table;
 
 public class RepositoryFactory
 {
+	private static final Logger logger = LogManager.getLogger(RepositoryFactory.class);
+	
 	private IDataStore dataStore;
 	
 	private Map<Class<?>, ICrudRepository<?>> typeToRepo = new HashMap<>();
@@ -53,7 +58,9 @@ public class RepositoryFactory
 		{
 			if(persistenceContext == null)
 			{
-				throw new IllegalStateException("No persistence context is specified for repository factory");
+				logger.warn("As not persistence context is specified, using no-audit persistence context");
+				
+				persistenceContext = new NoAuditPersistenceContext();
 			}
 			
 			executorFactory = new ExecutorFactory(new PersistenceExecutionContext(this, persistenceContext));
