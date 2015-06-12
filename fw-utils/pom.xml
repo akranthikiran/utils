@@ -3,11 +3,11 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>com.fw</groupId>
-	<artifactId>utils</artifactId>
+	<artifactId>fw-utils</artifactId>
 	<version>1.0</version>
 	<packaging>jar</packaging>
 
-	<name>utils</name>
+	<name>fw-utils</name>
 	<url>http://maven.apache.org</url>
 
 	<properties>

@@ -5,10 +5,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import com.fw.persistence.FieldDetails;
+import com.fw.utils.ConvertUtils;
 
 public class ConversionService
 {
+	private static Logger logger = LogManager.getLogger(ConversionService.class);
+	
 	private List<IConverter> converters = new ArrayList<>();
 	
 	private Map<Class<?>, IConverter> typeToConverter = new HashMap<>();
@@ -133,6 +139,15 @@ public class ConversionService
 			{
 				return result;
 			}
+		}
+
+		//if in built coverters are not able to convert, use generic utils to convert
+		try
+		{
+			return ConvertUtils.convert(from, targetType);
+		}catch(Exception ex)
+		{
+			logger.warn("An error occurred while converting '{}' to type '{}' in generic way. Error - {}", from, targetType.getName(), ex);
 		}
 		
 		throw new DataConversionException("Failed to convert to '" + targetType.getName() + "' from value - " + from + "[" + from.getClass().getName() + "]");
