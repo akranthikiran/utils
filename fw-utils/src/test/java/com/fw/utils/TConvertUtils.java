@@ -42,6 +42,10 @@ public class TConvertUtils
 		
 		//string to float
 		Assert.assertEquals(ConvertUtils.convert("3.45", float.class), 3.45f);
+		
+		//string to enum
+		Assert.assertEquals(ConvertUtils.convert("MALE", Gender.class), Gender.MALE);
+		Assert.assertEquals(ConvertUtils.convert(Gender.MALE, String.class), "MALE");
 	}
 	
 	/**

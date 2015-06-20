@@ -14,7 +14,7 @@ public enum DataType
 	BOOLEAN(boolean.class, Boolean.class),
 	DATE, 
 	BLOB, 
-	CLOB, 
+	CLOB,
 	DATE_TIME(Date.class), 
 	UNKNOWN;
 	

@@ -84,7 +84,7 @@ public class DeleteQueryExecutor extends AbstractPersistQueryExecutor
 			for(String column : parentConditions.keySet())
 			{
 				value = parentConditions.get(column);
-				value = conversionService.convertToDataStore(value, null);
+				value = conversionService.convertToDBType(value, null);
 				
 				childQuery.addParentCondition(new ConditionParam(column, value, -1));
 			}
@@ -98,7 +98,7 @@ public class DeleteQueryExecutor extends AbstractPersistQueryExecutor
 			for(String column : childConditions.keySet())
 			{
 				value = childConditions.get(column);
-				value = conversionService.convertToDataStore(value, null);
+				value = conversionService.convertToDBType(value, null);
 				
 				childQuery.addChildCondition(new ConditionParam(column, value, -1));
 			}
@@ -191,7 +191,7 @@ public class DeleteQueryExecutor extends AbstractPersistQueryExecutor
 				for(ConditionParam condition: deleteQuery.getConditions())
 				{
 					value = params[condition.getIndex()];
-					value = conversionService.convertToDataStore(value, null);
+					value = conversionService.convertToDBType(value, null);
 					
 					condition.setValue(value);
 				}

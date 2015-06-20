@@ -53,7 +53,7 @@ public class ExistenceQueryExecutor extends QueryExecutor
 			
 			for(ConditionParam condition: query.getConditions())
 			{
-				value = conversionService.convertToDataStore(params[condition.getIndex()], null);
+				value = conversionService.convertToDBType(params[condition.getIndex()], null);
 				condition.setValue(value);
 			}
 			

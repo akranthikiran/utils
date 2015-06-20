@@ -137,7 +137,7 @@ public class UpdateQueryExecutor extends AbstractPersistQueryExecutor
 				continue;
 			}
 			
-			value = conversionService.convertToDataStore(field.getValue(entity), field);
+			value = conversionService.convertToDBType(field.getValue(entity), field);
 			
 			query.addColumn(new ColumnParam(field.getColumn(), value, -1));
 		}
@@ -174,7 +174,7 @@ public class UpdateQueryExecutor extends AbstractPersistQueryExecutor
 			
 			for(ConditionParam condition: updateQuery.getConditions())
 			{
-				value = conversionService.convertToDataStore(params[condition.getIndex()], null);
+				value = conversionService.convertToDBType(params[condition.getIndex()], null);
 				condition.setValue(value);
 			}
 			
@@ -183,7 +183,7 @@ public class UpdateQueryExecutor extends AbstractPersistQueryExecutor
 			
 			for(ColumnParam column: updateQuery.getColumns())
 			{
-				value = conversionService.convertToDataStore(params[column.getIndex()], null);
+				value = conversionService.convertToDBType(params[column.getIndex()], null);
 				column.setValue(value);
 			}
 			

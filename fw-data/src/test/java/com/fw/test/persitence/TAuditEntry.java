@@ -6,7 +6,7 @@ import java.util.GregorianCalendar;
 import java.util.List;
 
 import org.testng.Assert;
-import org.testng.annotations.AfterClass;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
@@ -44,7 +44,7 @@ public class TAuditEntry
 		this.tomorrow = calendar.getTime();
 	}
 	
-	@AfterClass
+	@AfterMethod
 	public void clean()
 	{
 		ITaskRespository taskRepository = factory.getRepository(ITaskRespository.class);

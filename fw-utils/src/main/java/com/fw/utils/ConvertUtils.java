@@ -47,8 +47,19 @@ public class ConvertUtils
 		convertUtilsBean.register(new DoubleConverter(), double.class);
 	}
 	
+	@SuppressWarnings({"unchecked", "rawtypes"})
 	public static Object convert(Object value, Class<?> targetType)
 	{
+		if(Enum.class.isAssignableFrom(targetType))
+		{
+			if(!(value instanceof String))
+			{
+				throw new ConversionException(String.format("An error occurred while converting {} to type -{}", value, targetType.getName()));
+			}
+			
+			return Enum.valueOf((Class)targetType, (String)value);
+		}
+		
 		return convertUtilsBean.convert(value, targetType);
 	}
 

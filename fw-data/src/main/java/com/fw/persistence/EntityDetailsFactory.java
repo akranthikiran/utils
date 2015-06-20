@@ -15,6 +15,7 @@ import com.fw.persistence.annotations.AccessType;
 import com.fw.persistence.annotations.Audit;
 import com.fw.persistence.annotations.AutogenerationType;
 import com.fw.persistence.annotations.Column;
+import com.fw.persistence.annotations.DataType;
 import com.fw.persistence.annotations.FieldAccess;
 import com.fw.persistence.annotations.ForeignConstraint;
 import com.fw.persistence.annotations.ForeignConstraints;
@@ -158,7 +159,7 @@ public class EntityDetailsFactory
 						+ "' in class - " + entityDetails.getEntityType().getName());
 			}
 			
-			conditionMap.put(fieldDetails.getName(), conversionService.convertToDataStore(condition.value(), fieldDetails));
+			conditionMap.put(fieldDetails.getName(), conversionService.convertToDBType(condition.value(), fieldDetails));
 		}
 		
 		//fetch parent conditions
@@ -175,7 +176,7 @@ public class EntityDetailsFactory
 						+ "' in class - " + entityDetails.getEntityType().getName());
 			}
 			
-			parentConditionMap.put(fieldDetails.getName(), conversionService.convertToDataStore(condition.value(), fieldDetails));
+			parentConditionMap.put(fieldDetails.getName(), conversionService.convertToDBType(condition.value(), fieldDetails));
 		}
 		
 		ForeignConstraintDetails newConstraint = new ForeignConstraintDetails(foreignConstraint.name(), fieldMap, conditionMap, parentConditionMap,
@@ -349,6 +350,7 @@ public class EntityDetailsFactory
 		Column column = null;
 		String columnName = null;
 		Indexed indexed = null;
+		DataType dbType = null;
 		
 		for(Field field: fields)
 		{
@@ -368,6 +370,7 @@ public class EntityDetailsFactory
 			}
 			
 			columnName = (column != null && column.name().length() > 0) ? column.name().trim() : field.getName();
+			dbType = (column != null) ? column.type() : DataType.UNKNOWN;
 			
 			//flatten the column name
 			columnName = columnName.replaceAll(SPECIAL_CHAR_PATTERN, "");
@@ -388,7 +391,7 @@ public class EntityDetailsFactory
 				columnName = field.getName();
 			}
 			
-			buildFieldDetails(field, columnName, entityDetails);
+			buildFieldDetails(field, columnName, dbType, entityDetails);
 			
 			/*
 			idField = field.getAnnotation(IdField.class);
@@ -425,14 +428,14 @@ public class EntityDetailsFactory
 		}
 	}
 	
-	private static FieldDetails buildFieldDetails(Field field, String columnName, EntityDetails entityDetails)
+	private static FieldDetails buildFieldDetails(Field field, String columnName, DataType dataType, EntityDetails entityDetails)
 	{
 		FieldDetails fieldDetails = null;
 		IdField idField = field.getAnnotation(IdField.class);
 
 		if(idField == null)
 		{
-			fieldDetails = new FieldDetails(field, columnName, (field.getAnnotation(ReadOnly.class) != null) );
+			fieldDetails = new FieldDetails(field, columnName, dataType, (field.getAnnotation(ReadOnly.class) != null) );
 			
 			logger.trace("Adding field details {} to entity {}", fieldDetails, entityDetails);
 		}
@@ -445,7 +448,7 @@ public class EntityDetailsFactory
 				sequenceName = "SEQ_" + entityDetails.getEntityType().getSimpleName().toUpperCase() + "_" + field.getName().toUpperCase();
 			}
 			
-			fieldDetails = new FieldDetails(field, columnName, true, idField.autogeneration(), idField.autofetch(), true, sequenceName);
+			fieldDetails = new FieldDetails(field, columnName, dataType, true, idField.autogeneration(), idField.autofetch(), true, sequenceName);
 			
 			logger.trace("Adding ID field details {} to entity {}", fieldDetails, entityDetails);
 		}
@@ -472,9 +475,9 @@ public class EntityDetailsFactory
 		}
 	}
 	
-	private static FieldDetails buildFieldDetailsWithOverriddenColumn(Field field, String columnName, EntityDetails entityDetails)
+	private static FieldDetails buildFieldDetailsWithOverriddenColumn(Field field, String columnName, DataType dataType, EntityDetails entityDetails)
 	{
-		FieldDetails fieldDetails = buildFieldDetails(field, columnName, entityDetails);
+		FieldDetails fieldDetails = buildFieldDetails(field, columnName, dataType, entityDetails);
 		fieldDetails.setOverriddenColumnName(columnName);
 		
 		return fieldDetails;
@@ -499,10 +502,10 @@ public class EntityDetailsFactory
 		
 		try
 		{
-			buildFieldDetailsWithOverriddenColumn(auditClass.getDeclaredField("_auditId"), audit.idColumn(), auditEntityDetails);
-			buildFieldDetailsWithOverriddenColumn(auditClass.getDeclaredField("_auditType"), audit.typeColumn(), auditEntityDetails);
-			buildFieldDetailsWithOverriddenColumn(auditClass.getDeclaredField("_auditTime"), audit.timeColumn(), auditEntityDetails);
-			buildFieldDetailsWithOverriddenColumn(auditClass.getDeclaredField("_auditChangedBy"), audit.changedByColumn(), auditEntityDetails);
+			buildFieldDetailsWithOverriddenColumn(auditClass.getDeclaredField("_auditId"), audit.idColumn(), DataType.STRING, auditEntityDetails);
+			buildFieldDetailsWithOverriddenColumn(auditClass.getDeclaredField("_auditType"), audit.typeColumn(), DataType.STRING, auditEntityDetails);
+			buildFieldDetailsWithOverriddenColumn(auditClass.getDeclaredField("_auditTime"), audit.timeColumn(), DataType.DATE_TIME, auditEntityDetails);
+			buildFieldDetailsWithOverriddenColumn(auditClass.getDeclaredField("_auditChangedBy"), audit.changedByColumn(), DataType.STRING, auditEntityDetails);
 			
 			AuditDetails auditDetails = new AuditDetails(tableName, audit.idColumn(), audit.typeColumn(), audit.timeColumn(), audit.changedByColumn());
 			entityDetails.setAuditDetails(auditDetails);

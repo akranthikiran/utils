@@ -181,7 +181,7 @@ public class FinderQueryExecutor extends QueryExecutor
 		
 		if(!isReturnTypeEntity)
 		{
-			return conversionService.convertFromDataStore(record.getObject(0), returnColumnToField.get(record.getColumn(0)));
+			return conversionService.convertToJavaType(record.getObject(0), returnColumnToField.get(record.getColumn(0)));
 		}
 		
 		try
@@ -195,7 +195,7 @@ public class FinderQueryExecutor extends QueryExecutor
 				fieldDetails = returnColumnToField.get(column);
 				
 				value = record.getObject(column);
-				value = conversionService.convertFromDataStore(value, fieldDetails);
+				value = conversionService.convertToJavaType(value, fieldDetails);
 			
 				if(value == null)
 				{
@@ -226,7 +226,7 @@ public class FinderQueryExecutor extends QueryExecutor
 			
 			for(ConditionParam condition: query.getConditions())
 			{
-				value = conversionService.convertToDataStore(params[condition.getIndex()], null);
+				value = conversionService.convertToDBType(params[condition.getIndex()], null);
 				condition.setValue(value);
 			}
 			

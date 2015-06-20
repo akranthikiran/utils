@@ -9,27 +9,26 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.fw.persistence.FieldDetails;
+import com.fw.persistence.annotations.DataType;
 import com.fw.utils.ConvertUtils;
 
+/**
+ * Service to convert object of one type into other.
+ * @author akiran
+ */
 public class ConversionService
 {
 	private static Logger logger = LogManager.getLogger(ConversionService.class);
 	
-	private List<IConverter> converters = new ArrayList<>();
+	private List<IPersistenceConverter> converters = new ArrayList<>();
 	
-	private Map<Class<?>, IConverter> typeToConverter = new HashMap<>();
+	private Map<Class<?>, IPersistenceConverter> typeToConverter = new HashMap<>();
 	
-	public ConversionService()
-	{
-		converters.add(new NumberConverter());
-		converters.add(new ClobConverter());
-		converters.add(new EnumConverter());
-
-		//String converter should be used as last option
-		converters.add(new StringConverter());
-	}
-	
-	public void addConverter(IConverter converter)
+	/**
+	 * Adds a converter that can modify data of one particular type to other
+	 * @param converter
+	 */
+	public void addConverter(IPersistenceConverter converter)
 	{
 		if(converter == null)
 		{
@@ -39,7 +38,13 @@ public class ConversionService
 		this.converters.add(converter);
 	}
 	
-	private IConverter getConverter(FieldDetails fieldDetails)
+	/**
+	 * Fetches the converter for specified field, if it is explcitly defined on 
+	 * target java field
+	 * @param fieldDetails
+	 * @return
+	 */
+	private IPersistenceConverter getConverter(FieldDetails fieldDetails)
 	{
 		//TODO: Check why field details needs to be null. Is there any substitute.
 		if(fieldDetails == null || fieldDetails.getField() == null)
@@ -55,7 +60,7 @@ public class ConversionService
 		}
 		
 		Class<?> converterType = fieldConverter.converterType();
-		IConverter converter = typeToConverter.get(converterType);
+		IPersistenceConverter converter = typeToConverter.get(converterType);
 		
 		if(converter != null)
 		{
@@ -64,7 +69,7 @@ public class ConversionService
 		
 		try
 		{
-			converter = (IConverter)converterType.newInstance();
+			converter = (IPersistenceConverter)converterType.newInstance();
 		}catch(Exception ex)
 		{
 			throw new IllegalStateException("Failed to create converter of type: " + converterType.getName(), ex);
@@ -74,34 +79,58 @@ public class ConversionService
 		return converter;
 	}
 	
-	public Object convertFromDataStore(Object from, FieldDetails fieldDetails)
+	/**
+	 * Converts specified db object to matching java type
+	 * @param dbObject
+	 * @param fieldDetails
+	 * @return
+	 */
+	public Object convertToJavaType(Object dbObject, FieldDetails fieldDetails)
 	{
-		IConverter converter = getConverter(fieldDetails);
+		//fetch field specific converter
+		IPersistenceConverter converter = getConverter(fieldDetails);
 		
+		//if field specific converter is present
 		if(converter != null)
 		{
-			return converter.convertToTargetType(from, fieldDetails.getField().getType());
+			return converter.convertToJavaType(dbObject, fieldDetails.getDbDataType(), fieldDetails.getField().getType());
 		}
 		
-		return convert(from, fieldDetails.getField().getType());
+		//try to convert using default converters and in generic way
+		return convert(dbObject, fieldDetails.getDbDataType(), fieldDetails.getField().getType());
 	}
 	
-	public Object convertToDataStore(Object from, FieldDetails fieldDetails)
+	/**
+	 * Converts specified java object into target db type
+	 * @param javaObj
+	 * @param fieldDetails
+	 * @return
+	 */
+	public Object convertToDBType(Object javaObj, FieldDetails fieldDetails)
 	{
-		IConverter fldConverter = getConverter(fieldDetails);
+		//fieldDetails will be null, when conversion is needed for values in conditions
+		if(fieldDetails == null)
+		{
+			return javaObj;
+		}
 		
+		//fetch field specific converter
+		IPersistenceConverter fldConverter = getConverter(fieldDetails);
+		
+		//if field specific converter is present
 		if(fldConverter != null)
 		{
-			return fldConverter.convertToDBType(from, fieldDetails);
+			return fldConverter.convertToDBType(javaObj, fieldDetails.getDbDataType());
 		}
 		
 		Object result = null;
 		
 		//check if any converter can handle conversion
-		for(IConverter converter: converters)
+		for(IPersistenceConverter converter: converters)
 		{
-			result = converter.convertToDBType(from, fieldDetails);
+			result = converter.convertToDBType(javaObj, fieldDetails.getDbDataType());
 			
+			//if conversion was successful
 			if(result != null)
 			{
 				return result;
@@ -109,32 +138,44 @@ public class ConversionService
 		}
 		
 		//if no converter is able to convert, simply return actual value
-		return from;
+		return javaObj;
 	}
 	
-	protected Object convert(Object from, Class<?> targetType)
+	/**
+	 * Converts specified db object into specified java type using default converters 
+	 * @param dbObject
+	 * @param dbDataType
+	 * @param targetType
+	 * @return
+	 */
+	private Object convert(Object dbObject, DataType dbDataType, Class<?> targetType)
 	{
-		if(from == null)
+		//if from value is null
+		if(dbObject == null)
 		{
 			return null;
 		}
 		
-		if(targetType.isAssignableFrom(from.getClass()))
+		//if db object is same as target java type
+		if(targetType.isAssignableFrom(dbObject.getClass()))
 		{
-			return from;
+			return dbObject;
 		}
 		
-		if((from instanceof String) && ((String)from).trim().length() == 0)
+		//if db value is string and its empty
+		if((dbObject instanceof String) && ((String)dbObject).trim().length() == 0)
 		{
 			return null;
 		}
 		
 		Object result = null;
 		
-		for(IConverter converter: converters)
+		//check if any of the default converters can convert current db object
+		for(IPersistenceConverter converter: converters)
 		{
-			result = converter.convertToTargetType(from, targetType);
+			result = converter.convertToJavaType(dbObject, dbDataType, targetType);
 			
+			//if conversion was success
 			if(result != null)
 			{
 				return result;
@@ -144,12 +185,12 @@ public class ConversionService
 		//if in built coverters are not able to convert, use generic utils to convert
 		try
 		{
-			return ConvertUtils.convert(from, targetType);
+			return ConvertUtils.convert(dbObject, targetType);
 		}catch(Exception ex)
 		{
-			logger.warn("An error occurred while converting '{}' to type '{}' in generic way. Error - {}", from, targetType.getName(), ex);
+			logger.warn("An error occurred while converting '{}' to type '{}' in generic way. Error - {}", dbObject, targetType.getName(), ex);
 		}
 		
-		throw new DataConversionException("Failed to convert to '" + targetType.getName() + "' from value - " + from + "[" + from.getClass().getName() + "]");
+		throw new DataConversionException("Failed to convert to '" + targetType.getName() + "' from value - " + dbObject + "[" + dbObject.getClass().getName() + "]");
 	}
 }

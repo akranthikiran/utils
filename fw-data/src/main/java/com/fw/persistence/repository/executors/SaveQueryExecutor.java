@@ -90,7 +90,7 @@ public class SaveQueryExecutor extends AbstractPersistQueryExecutor
 				continue;
 			}
 			
-			value = conversionService.convertToDataStore(field.getValue(entity), field);
+			value = conversionService.convertToDBType(field.getValue(entity), field);
 			
 			query.addColumn(new ColumnParam(field.getColumn(), value, -1));
 		}

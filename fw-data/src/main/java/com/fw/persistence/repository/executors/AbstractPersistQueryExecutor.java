@@ -65,7 +65,7 @@ public abstract class AbstractPersistQueryExecutor extends QueryExecutor
 				fieldDetails = entityDetails.getFieldDetailsByField(field);
 				
 				value = fieldDetails.getValue(entity);
-				value = conversionService.convertToDataStore(value, fieldDetails);
+				value = conversionService.convertToDBType(value, fieldDetails);
 				
 				existenceQuery.addCondition(new ConditionParam(fieldDetails.getColumn(), value, -1));
 				fieldValues.put(field, value);
@@ -144,7 +144,7 @@ public abstract class AbstractPersistQueryExecutor extends QueryExecutor
 				fieldDetails = entityDetails.getFieldDetailsByField(field);
 				
 				value = fieldDetails.getValue(entity);
-				value = conversionService.convertToDataStore(value, fieldDetails);
+				value = conversionService.convertToDBType(value, fieldDetails);
 				
 				foreignFieldDetails = foreignEntityDetails.getFieldDetailsByField(fieldToForeign.get(field));
 				
@@ -170,7 +170,7 @@ public abstract class AbstractPersistQueryExecutor extends QueryExecutor
 				for(String column: conditions.keySet())
 				{
 					value = conditions.get(column);
-					value = conversionService.convertToDataStore(value, null);
+					value = conversionService.convertToDBType(value, null);
 					
 					existenceQuery.addCondition(new ConditionParam(column, value, -1));
 				}
@@ -219,7 +219,7 @@ public abstract class AbstractPersistQueryExecutor extends QueryExecutor
 			fieldDetails = entityDetails.getFieldDetailsByField(field);
 			
 			value = fieldDetails.getValue(entity);
-			value = conversionService.convertToDataStore(value, fieldDetails);
+			value = conversionService.convertToDBType(value, fieldDetails);
 			
 			findQuery.addCondition(new ConditionParam(fieldDetails.getColumn(), value, -1));
 		}
@@ -231,7 +231,7 @@ public abstract class AbstractPersistQueryExecutor extends QueryExecutor
 			return null;
 		}
 		
-		Object idValue = conversionService.convertFromDataStore(records.get(0).getObject(0), idFieldDetails);
+		Object idValue = conversionService.convertToJavaType(records.get(0).getObject(0), idFieldDetails);
 		idFieldDetails.setValue(entity, idValue);
 		
 		return idValue;

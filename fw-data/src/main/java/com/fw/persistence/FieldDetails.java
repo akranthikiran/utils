@@ -3,6 +3,7 @@ package com.fw.persistence;
 import java.lang.reflect.Field;
 
 import com.fw.persistence.annotations.AutogenerationType;
+import com.fw.persistence.annotations.DataType;
 
 public class FieldDetails
 {
@@ -12,6 +13,7 @@ public class FieldDetails
 	
 	private Field field;
 	private String column;
+	private DataType dbDataType;
 	private int flags;
 	private AutogenerationType autogenerationType;
 	private String sequenceName;
@@ -22,10 +24,11 @@ public class FieldDetails
 	{
 		this.field = details.field;
 		this.column = details.column;
+		this.dbDataType = details.dbDataType;
 		this.overriddenColumnName = details.overriddenColumnName;
 	}
 	
-	public FieldDetails(Field field, String column, boolean readOnly)
+	public FieldDetails(Field field, String column, DataType dbDataType, boolean readOnly)
 	{
 		if(field == null)
 		{
@@ -39,6 +42,7 @@ public class FieldDetails
 		
 		this.field = field;
 		this.column = column;
+		this.dbDataType = dbDataType;
 		this.flags = readOnly ? FLAG_READ_ONLY : 0;
 
 		if(!field.isAccessible())
@@ -47,9 +51,9 @@ public class FieldDetails
 		}
 	}
 
-	public FieldDetails(Field field, String column, boolean idField, AutogenerationType autogenerationType, boolean autoFetch, boolean readOnly, String sequenceName)
+	public FieldDetails(Field field, String column, DataType dbDataType, boolean idField, AutogenerationType autogenerationType, boolean autoFetch, boolean readOnly, String sequenceName)
 	{
-		this(field, column, readOnly);
+		this(field, column, dbDataType, readOnly);
 		
 		if(autogenerationType == AutogenerationType.SEQUENCE && (sequenceName == null || sequenceName.trim().length() == 0))
 		{
@@ -81,6 +85,11 @@ public class FieldDetails
 	public String getColumn()
 	{
 		return column;
+	}
+	
+	public DataType getDbDataType()
+	{
+		return dbDataType;
 	}
 
 	public boolean isIdField()

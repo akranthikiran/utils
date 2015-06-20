@@ -14,7 +14,7 @@ import com.fw.persistence.freemarker.TrimDirective;
 import freemarker.template.Configuration;
 import freemarker.template.Template;
 
-public class RdbmsTemplates implements Validateable
+public class RdbmsConfiguration implements Validateable
 {
 	public static final String CHECK_SEQUENCE_QUERY = "checkSequenceTemplate";
 	public static final String CREATE_SEQUENCE_QUERY = "createSequenceTemplate";
@@ -52,7 +52,7 @@ public class RdbmsTemplates implements Validateable
 	
 	private ParamCollectorDirective paramCollectorDirective = new ParamCollectorDirective();
 	
-	public RdbmsTemplates()
+	public RdbmsConfiguration()
 	{
 		configuration.setSharedVariable("trim", new TrimDirective());
 		configuration.setSharedVariable("param", paramCollectorDirective);

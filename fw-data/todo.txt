@@ -1,3 +1,33 @@
+Existing test case execution
+
+Ability to query without need of repository
+	Can be part of repo factory
+		name can be changed - PersistenceManager
+
+Ability to support multi valued fields
+	For rdbms sub table can be created
+	@ChildTable can be used to override default child table name creation
+	Should be done only explicit data type is not specified
+	
+	appending to existing list, during update should be supported
+
+Ability to support sub entity (or entities)
+	For rdbms sub table can be created
+
+All queries and results should be expressible in the form of objects
+
+Generic find method in repo which takes query as object and results as type
+	useful for search queries
+
+For complex queties xml + free-marker should be supported
+
+Migration of mongo functionality
+
+Entity field extensions
+
+join queries as objects
+
+==========================================================
 Make the common queries into single xml and other template xml file should extend this xml
 	This will reduce code repetetion in derby and mysql example
 	The child xml should be able to override default queries

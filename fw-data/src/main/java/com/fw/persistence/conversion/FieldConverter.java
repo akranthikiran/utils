@@ -9,5 +9,5 @@ import java.lang.annotation.Target;
 @Target(ElementType.FIELD)
 public @interface FieldConverter
 {
-	public Class<? extends IConverter> converterType();
+	public Class<? extends IPersistenceConverter> converterType();
 }
