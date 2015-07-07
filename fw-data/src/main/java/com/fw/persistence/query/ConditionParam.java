@@ -8,18 +8,25 @@ public class ConditionParam
 	private Operator operator = Operator.EQ;
 	private Object value;
 	private int index;
+	private boolean embededCondition;
 	
-	public ConditionParam(String column, Operator operator, Object value, int index)
+	public ConditionParam(String column, Operator operator, Object value, int index, boolean embededCondition)
 	{
 		this.column = column;
 		this.operator = operator;
 		this.value = value;
 		this.index = index;
+		this.embededCondition = embededCondition;
+	}
+
+	public ConditionParam(String column, Operator operator, Object value, int index)
+	{
+		this(column, operator, value, index, false);
 	}
 
 	public ConditionParam(String column, Object value, int index)
 	{
-		this(column, Operator.EQ, value, index);
+		this(column, Operator.EQ, value, index, false);
 	}
 
 	public String getColumn()
@@ -45,6 +52,11 @@ public class ConditionParam
 	public int getIndex()
 	{
 		return index;
+	}
+	
+	public boolean isEmbededCondition()
+	{
+		return embededCondition;
 	}
 	
 	/* (non-Javadoc)

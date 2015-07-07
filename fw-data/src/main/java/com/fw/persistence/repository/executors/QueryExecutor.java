@@ -1,6 +1,7 @@
 package com.fw.persistence.repository.executors;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
 import org.apache.logging.log4j.LogManager;
@@ -19,6 +20,7 @@ import com.fw.persistence.query.IConditionalQuery;
 import com.fw.persistence.repository.InvalidRepositoryException;
 import com.fw.persistence.repository.PersistenceExecutionContext;
 import com.fw.persistence.repository.annotations.Condition;
+import com.fw.persistence.repository.annotations.QueryObject;
 
 public abstract class QueryExecutor
 {
@@ -64,6 +66,48 @@ public abstract class QueryExecutor
 		return null;
 	}
 	
+	private void fetchConditionsFromObject(String methodName, Class<?> queryobjType, IConditionalQuery query, int index)
+	{
+		Field fields[] = queryobjType.getFields();
+		Condition condition = null;
+		FieldDetails fieldDetails = null;
+		String name = null;
+		
+		//loop through query object type fields 
+		for(Field field : fields)
+		{
+			condition = field.getAnnotation(Condition.class);
+			
+			//if field is not marked as condition
+			if(condition == null)
+			{
+				continue;
+			}
+			
+			//fetch entity field name
+			name = condition.value();
+			
+			//if name is not specified in condition
+			if(name.trim().length() == 0)
+			{
+				//use field name
+				name = field.getName();
+			}
+			
+			//fetch corresponding field details
+			fieldDetails = this.entityDetails.getFieldDetailsByField(name);
+			
+			if(fieldDetails == null)
+			{
+				throw new InvalidRepositoryException(String.format(
+						"Invalid @Condition field '%s'[%s] is specified for finder method '%s' of repository: %s", 
+							name, queryobjType.getName(), methodName, repositoryType.getName()));
+			}
+
+			query.addCondition(new ConditionParam(fieldDetails.getColumn(), condition.op(), null, index, true));
+		}
+	}
+	
 	protected boolean fetchConditonsByAnnotations(Method method, IConditionalQuery query, boolean expectAllConditions)
 	{
 		logger.trace("Started method: fetchConditonsByAnnotations");
@@ -76,17 +120,30 @@ public abstract class QueryExecutor
 			return false;
 		}
 
+		QueryObject queryObject = null;
 		Condition condition = null;
 		boolean found = false;
 		FieldDetails fieldDetails = null;
+		String fieldName = null;
 		
 		//fetch conditions for each argument
 		for(int i = 0; i < paramTypes.length; i++)
 		{
 			condition = getAnnotation(paramAnnotations[i], Condition.class);
 			
+			//if condition is not found on attr
 			if(condition == null)
 			{
+				//check for query object annotation
+				queryObject = getAnnotation(paramAnnotations[i], QueryObject.class);
+				
+				//if query object is found find nested conditions
+				if(queryObject != null)
+				{
+					fetchConditionsFromObject(method.getName(), paramTypes[i], query, i);
+					continue;
+				}
+				
 				if(!expectAllConditions)
 				{
 					continue;
@@ -94,11 +151,19 @@ public abstract class QueryExecutor
 				
 				if(found)
 				{
-					throw new InvalidRepositoryException("@Condition are not defined for all parameters of finder method '" 
+					throw new InvalidRepositoryException("@Condition are not defined for all parameters of method '" 
 								+ method.getName() + "' of repository: " + repositoryType.getName());
 				}
 				
 				return false;
+			}
+			
+			fieldName = condition.value();
+			
+			if(fieldName.trim().length() == 0)
+			{
+				throw new InvalidRepositoryException("No name is specified in @Condition parameter of method '" 
+						+ method.getName() + "' of repository: " + repositoryType.getName());
 			}
 			
 			fieldDetails = this.entityDetails.getFieldDetailsByField(condition.value());

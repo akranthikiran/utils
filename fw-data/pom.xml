@@ -21,6 +21,8 @@
 
 		<testng.version>6.3.1</testng.version>
 		<mockito.version>1.9.5</mockito.version>
+
+		<jasypt.version>1.9.2</jasypt.version>
 	</properties>
 
 	<dependencies>
@@ -85,6 +87,13 @@
 			<artifactId>fw-utils</artifactId>
 			<version>1.0</version>
 		</dependency>
+
+		<dependency>
+			<groupId>org.jasypt</groupId>
+			<artifactId>jasypt</artifactId>
+			<version>1.9.2</version>
+		</dependency>
+
 
 		<dependency>
 			<groupId>org.testng</groupId>
