@@ -17,6 +17,8 @@
 					<#assign dataType="DOUBLE">
 				<#elseif columnType == "DATE_TIME">
 					<#assign dataType="DATETIME">
+				<#elseif columnType == "CLOB">
+					<#assign dataType="LONGTEXT">
 				<#else>
 					<#assign dataType>${column.typeName}</#assign>
 				</#if>
@@ -120,6 +122,18 @@
 		<#list query.childConditions as condition>AND ${condition.column} ${condition.operator} ?</#list>
 	]]></template>	
 
+	<template name="fetchChildrenIdsTemplate"><![CDATA[
+		SELECT ${query.childIdColumn}
+		FROM ${query.childTableName}
+		WHERE (<#list query.childColumns as column>${column}<#if column_has_next>, </#if></#list>)
+			IN (SELECT <#list query.parentColumns as column>${column}<#if column_has_next>, </#if></#list>
+				FROM ${query.parentTableName}
+				WHERE 1 = 1
+				<#list query.parentConditions as condition>AND ${condition.column} ${condition.operator} ?</#list>
+			)
+		<#list query.childConditions as condition>AND ${condition.column} ${condition.operator} ?</#list>
+	]]></template>	
+
 	<template name="finderTemplate"><![CDATA[
 		SELECT <#list query.columns as column>${column}<#if column_has_next>,</#if></#list>
 		FROM ${query.tableName}
@@ -135,6 +149,30 @@
 		<#list query.conditions as condition>
 			AND ${condition.column} ${condition.operator} ?
 		</#list>
+	]]></template>	
+
+	<template name="auditEntryTemplate"><![CDATA[
+		INSERT INTO ${query.auditTableName}(<#list query.columns as column>${column}<#if column_has_next>,</#if></#list>, <#list query.auditColumns as column>${column.name}<#if column_has_next>,</#if></#list>)
+		SELECT <#list query.columns as column>${column}<#if column_has_next>,</#if></#list>, <#list query.auditColumns as column>?<#if column_has_next>,</#if></#list>
+		FROM ${query.tableName}
+		WHERE 1 = 1
+		<#list query.conditions as condition>AND ${condition.column} ${condition.operator} ?</#list>
+	]]></template>	
+
+	<template name="clearAuditTemplate"><![CDATA[
+		DELETE FROM ${auditDetails.tableName}
+		WHERE ${auditDetails.timeColumn} <= <@param name="tillDate"/>
+	]]></template>	
+
+	<template name="fetchAuditEntriesTemplate"><![CDATA[
+		SELECT * FROM ${auditDetails.tableName}
+		WHERE 1 = 1
+		<#if query.fromDate??>AND ${auditDetails.timeColumn} >= <@param name="query.fromDate"/></#if>
+		<#if query.toDate??>AND ${auditDetails.timeColumn} <= <@param name="query.toDate"/></#if>
+		<#if query.entityId??>AND ${entityDetails.idField.column} = <@param name="query.entityId"/></#if>
+		<#if query.auditType??>AND ${auditDetails.typeColumn} = <@param name="query.auditTypeName"/></#if>
+		<#if query.changedBy??>AND ${auditDetails.changedByColumn} = <@param name="query.changedBy"/></#if>
+		ORDER BY ${auditDetails.idColumn} ASC
 	]]></template>	
 
 </configuration>

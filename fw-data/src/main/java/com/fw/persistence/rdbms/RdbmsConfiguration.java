@@ -35,7 +35,6 @@ public class RdbmsConfiguration implements Validateable
 	public static final String AUDIT_FETCH_QUERY = "fetchAuditEntriesTemplate";
 	
 	public static final String MANDATORY_QUERIES[] = {
-		CHECK_SEQUENCE_QUERY, CREATE_SEQUENCE_QUERY, 
 		CREATE_QUERY, CREATE_INDEX,
 		
 		SAVE_QUERY, UPDATE_QUERY, DELETE_QUERY, FINDER_QUERY, EXISTENCE_QUERY, 
