@@ -15,9 +15,10 @@ Ability to support sub entity (or entities)
 	For rdbms sub table can be created
 
 All queries and results should be expressible in the form of objects
+	finder queries
 
 Generic find method in repo which takes query as object and results as type
-	useful for search queries
+	useful for search, lov queries
 
 For complex queties xml + free-marker should be supported
 

@@ -24,6 +24,11 @@ public class ConversionService
 	
 	private Map<Class<?>, IPersistenceConverter> typeToConverter = new HashMap<>();
 	
+	public ConversionService()
+	{
+		addConverter(new StringDbConverter());
+	}
+	
 	/**
 	 * Adds a converter that can modify data of one particular type to other
 	 * @param converter
