@@ -18,7 +18,7 @@ import com.fw.ccg.xml.DynamicAttributeAcceptor;
 import com.fw.ccg.xml.DynamicDataAcceptor;
 import com.fw.ccg.xml.HybridTextBean;
 import com.fw.dao.qry.impl.BeanQueryFilter;
-import com.fw.util.PatternGroupMatcher;
+import com.fw.utils.PatternGroupMatcher;
 
 /**
  * This is the parsed version of DB queries. This class is designed to be loaded directly from XML using "FW XML" API.
