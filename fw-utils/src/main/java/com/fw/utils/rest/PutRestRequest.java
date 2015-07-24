@@ -4,20 +4,20 @@
 package com.fw.utils.rest;
 
 import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
-import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpPut;
 
 /**
- * Represents post request method
+ * Represents PUT request method
  * @author akiran
  */
-public class PostRestRequest extends RestRequestWithBody<PostRestRequest>
+public class PutRestRequest extends RestRequestWithBody<PutRestRequest>
 {
 	/**
 	 * @param uri
 	 */
-	public PostRestRequest(String uri)
+	public PutRestRequest(String uri)
 	{
-		super(uri, "POST");
+		super(uri, "PUT");
 	}
 	
 	/* (non-Javadoc)
@@ -26,6 +26,6 @@ public class PostRestRequest extends RestRequestWithBody<PostRestRequest>
 	@Override
 	protected HttpEntityEnclosingRequestBase newRequest(String baseUrl) 
 	{
-		return new HttpPost(baseUrl + getResolvedUri());
+		return new HttpPut(baseUrl + getResolvedUri());
 	}
 }
