@@ -174,7 +174,7 @@ public class UpdateQueryExecutor extends AbstractPersistQueryExecutor
 			
 			for(ConditionParam condition: updateQuery.getConditions())
 			{
-				value = conversionService.convertToDBType(params[condition.getIndex()], null);
+				value = conversionService.convertToDBType(params[condition.getIndex()], entityDetails.getFieldDetailsByColumn(condition.getColumn()));
 				condition.setValue(value);
 			}
 			
@@ -183,7 +183,7 @@ public class UpdateQueryExecutor extends AbstractPersistQueryExecutor
 			
 			for(ColumnParam column: updateQuery.getColumns())
 			{
-				value = conversionService.convertToDBType(params[column.getIndex()], null);
+				value = conversionService.convertToDBType(params[column.getIndex()], entityDetails.getFieldDetailsByColumn(column.getName()));
 				column.setValue(value);
 			}
 			
