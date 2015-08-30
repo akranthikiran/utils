@@ -59,6 +59,26 @@ public class CommonUtils
 	}
 	
 	/**
+	 * Gets wrapper type for specified primitive type
+	 * @param primitiveType
+	 * @return
+	 */
+	public static Class<?> getWrapperType(Class<?> primitiveType)
+	{
+		return primitiveToWrapper.get(primitiveType);
+	}
+	
+	/**
+	 * Gets primitive type for specified wrapper type
+	 * @param wrapperType
+	 * @return
+	 */
+	public static Class<?> getPrimitiveType(Class<?> wrapperType)
+	{
+		return wrapperToPrimitive.get(wrapperType);
+	}
+	
+	/**
 	 * Checks if object of type "from" can be assigned to type "to". This method considers auto-boxing also
 	 * @param from
 	 * @param to
