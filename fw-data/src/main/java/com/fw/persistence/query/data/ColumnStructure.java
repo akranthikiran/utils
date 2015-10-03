@@ -2,16 +2,18 @@ package com.fw.persistence.query.data;
 
 import java.lang.reflect.Field;
 
+import javax.persistence.Column;
+import javax.persistence.GenerationType;
+
 import com.fw.persistence.FieldDetails;
 import com.fw.persistence.PersistenceException;
-import com.fw.persistence.annotations.AutogenerationType;
-import com.fw.persistence.annotations.Column;
 import com.fw.persistence.annotations.DataType;
+import com.fw.persistence.annotations.DataTypeMapping;
 
 public class ColumnStructure
 {
 	private String name;
-	private int length = Column.DEFAULT_LENGTH;
+	private int length = 255;
 	private DataType type;
 	private boolean nullable = true;
 	private boolean autoIncrement;
@@ -22,10 +24,11 @@ public class ColumnStructure
 	{
 		Field field = fieldDetails.getField();
 		Column column = field.getAnnotation(Column.class);
+		DataTypeMapping dataTypeMapping = field.getAnnotation(DataTypeMapping.class);
 		
 		String overriddenColumn = fieldDetails.getOverriddenColumnName();
-		this.autoIncrement = (fieldDetails.isIdField() && fieldDetails.getAutogenerationType() == AutogenerationType.AUTO);
-		this.sequenceIncrement = (fieldDetails.isIdField() && fieldDetails.getAutogenerationType() == AutogenerationType.SEQUENCE);
+		this.autoIncrement = (fieldDetails.isIdField() && fieldDetails.getGenerationType() == GenerationType.IDENTITY);
+		this.sequenceIncrement = (fieldDetails.isIdField() && fieldDetails.getGenerationType() == GenerationType.SEQUENCE);
 		this.idField = fieldDetails.isIdField();
 		
 		if(overriddenColumn != null && overriddenColumn.trim().length() > 0)
@@ -48,7 +51,7 @@ public class ColumnStructure
 		if(column != null)
 		{
 			this.length = column.length();
-			this.type = column.type();
+			this.type = (dataTypeMapping != null) ? dataTypeMapping.type() : null;
 			this.nullable = column.nullable();
 			
 			if(this.type == DataType.UNKNOWN)

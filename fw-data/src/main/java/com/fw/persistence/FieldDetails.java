@@ -2,20 +2,20 @@ package com.fw.persistence;
 
 import java.lang.reflect.Field;
 
-import com.fw.persistence.annotations.AutogenerationType;
+import javax.persistence.GenerationType;
+
 import com.fw.persistence.annotations.DataType;
 
 public class FieldDetails
 {
 	public static final int FLAG_ID = 1;
-	public static final int FLAG_READ_ONLY = 2;
 	public static final int FLAG_AUTO_FETCH = 4;
 	
 	private Field field;
 	private String column;
 	private DataType dbDataType;
 	private int flags;
-	private AutogenerationType autogenerationType;
+	private GenerationType generationType;
 	private String sequenceName;
 	
 	private String overriddenColumnName;
@@ -28,7 +28,7 @@ public class FieldDetails
 		this.overriddenColumnName = details.overriddenColumnName;
 	}
 	
-	public FieldDetails(Field field, String column, DataType dbDataType, boolean readOnly)
+	public FieldDetails(Field field, String column, DataType dbDataType)
 	{
 		if(field == null)
 		{
@@ -43,7 +43,6 @@ public class FieldDetails
 		this.field = field;
 		this.column = column;
 		this.dbDataType = dbDataType;
-		this.flags = readOnly ? FLAG_READ_ONLY : 0;
 
 		if(!field.isAccessible())
 		{
@@ -51,19 +50,19 @@ public class FieldDetails
 		}
 	}
 
-	public FieldDetails(Field field, String column, DataType dbDataType, boolean idField, AutogenerationType autogenerationType, boolean autoFetch, boolean readOnly, String sequenceName)
+	public FieldDetails(Field field, String column, DataType dbDataType, boolean idField, GenerationType generationType, boolean autoFetch, String sequenceName)
 	{
-		this(field, column, dbDataType, readOnly);
+		this(field, column, dbDataType);
 		
-		if(autogenerationType == AutogenerationType.SEQUENCE && (sequenceName == null || sequenceName.trim().length() == 0))
+		if(generationType == GenerationType.SEQUENCE && (sequenceName == null || sequenceName.trim().length() == 0))
 		{
-			throw new NullPointerException("For sequence auto-generation type, sequence name is mandatory");
+			throw new NullPointerException("For sequence generation type, sequence name is mandatory");
 		}
 		
 		this.flags = idField ? (this.flags | FLAG_ID) : flags;
 		this.flags = autoFetch ? (this.flags | FLAG_AUTO_FETCH) : flags;
 		
-		this.autogenerationType = autogenerationType;
+		this.generationType = generationType;
 		this.sequenceName = sequenceName;
 	}
 	
@@ -102,19 +101,14 @@ public class FieldDetails
 		return ((flags & FLAG_AUTO_FETCH) == FLAG_AUTO_FETCH);
 	}
 
-	public AutogenerationType getAutogenerationType()
+	public GenerationType getGenerationType()
 	{
-		return autogenerationType;
+		return generationType;
 	}
 	
 	public String getSequenceName()
 	{
 		return sequenceName;
-	}
-	
-	public boolean isReadOnly()
-	{
-		return ((flags & FLAG_READ_ONLY) == FLAG_READ_ONLY);
 	}
 	
 	public Object getValue(Object bean)

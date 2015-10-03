@@ -10,6 +10,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.fw.persistence.FieldDetails;
 import com.fw.persistence.annotations.DataType;
+import com.fw.persistence.annotations.DataTypeMapping;
 import com.fw.utils.ConvertUtils;
 
 /**
@@ -57,7 +58,7 @@ public class ConversionService
 			return null;
 		}
 		
-		FieldConverter fieldConverter = fieldDetails.getField().getAnnotation(FieldConverter.class);
+		DataTypeMapping fieldConverter = fieldDetails.getField().getAnnotation(DataTypeMapping.class);
 		
 		if(fieldConverter == null)
 		{

@@ -5,10 +5,18 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+/**
+ * Represents unique constraint
+ * @author akiran
+ */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.FIELD})
 public @interface UniqueConstraint
 {
+	/**
+	 * Name of the constraint
+	 * @return
+	 */
 	public String name();
 	
 	/**
@@ -17,6 +25,10 @@ public @interface UniqueConstraint
 	 */
 	public String[] fields() default {};
 	
+	/**
+	 * Error message to be used when constraint fails
+	 * @return
+	 */
 	public String message() default "";
 	
 	/**

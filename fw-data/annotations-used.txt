@@ -1,0 +1,17 @@
+javax.persistence.Table
+	Maps the entity to a table name
+	uniqueConstraints	
+ javax.persistence.Column
+ 	name
+ 	length 
+ 	nullable
+ 	
+javax.persistence.Id
+  
+javax.persistence.GeneratedValue
+ 	IDENTITY & SEQUENCE only
+	generator => to fetch sequence name
+	
+ 	
+ 
+  

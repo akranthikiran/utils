@@ -12,7 +12,6 @@ import com.fw.persistence.EntityDetails;
 import com.fw.persistence.FieldDetails;
 import com.fw.persistence.ICrudRepository;
 import com.fw.persistence.IDataStore;
-import com.fw.persistence.IPersistenceContext;
 import com.fw.persistence.Operator;
 import com.fw.persistence.conversion.ConversionService;
 import com.fw.persistence.query.ConditionParam;
@@ -30,12 +29,10 @@ public abstract class QueryExecutor
 	protected Class<?> repositoryType;
 	
 	protected PersistenceExecutionContext persistenceExecutionContext;
-	protected IPersistenceContext context;
 	
 	public void setPersistenceExecutionContext(PersistenceExecutionContext persistenceExecutionContext)
 	{
 		this.persistenceExecutionContext = persistenceExecutionContext;
-		this.context = persistenceExecutionContext.getPersistenceContext();
 	}
 	
 	protected ICrudRepository<?> getCrudRepository(Class<?> entityType)

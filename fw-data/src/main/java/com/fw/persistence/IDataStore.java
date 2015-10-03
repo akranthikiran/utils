@@ -1,11 +1,9 @@
 package com.fw.persistence;
 
-import java.util.Date;
 import java.util.List;
 import java.util.Set;
 
 import com.fw.persistence.conversion.ConversionService;
-import com.fw.persistence.query.AuditEntryQuery;
 import com.fw.persistence.query.ChildrenExistenceQuery;
 import com.fw.persistence.query.CreateIndexQuery;
 import com.fw.persistence.query.CreateTableQuery;
@@ -49,12 +47,6 @@ public interface IDataStore
 	public List<Object> fetchChildrenIds(FetchChildrenIdsQuery fetchChildrenIdsQuery);
 
 	public List<Record> executeFinder(FinderQuery findQuery, EntityDetails entityDetails);
-
-	//Audit realted functions
-	public void addAuditEntries(AuditEntryQuery query);
-	
-	public void clearAudit(EntityDetails entityDetails, Date tillDate);
-	public List<Record> fetchAuditEntries(EntityDetails entityDetails, AuditSearchQuery query);
 }
 
 

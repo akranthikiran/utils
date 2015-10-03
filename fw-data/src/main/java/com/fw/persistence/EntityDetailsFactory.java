@@ -4,30 +4,31 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+
+import javax.persistence.Column;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.Table;
+import javax.persistence.Transient;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.fw.persistence.annotations.AccessType;
-import com.fw.persistence.annotations.Audit;
-import com.fw.persistence.annotations.AutogenerationType;
-import com.fw.persistence.annotations.Column;
+import com.fw.persistence.annotations.AutoFetchType;
 import com.fw.persistence.annotations.DataType;
+import com.fw.persistence.annotations.DataTypeMapping;
 import com.fw.persistence.annotations.FieldAccess;
 import com.fw.persistence.annotations.ForeignConstraint;
 import com.fw.persistence.annotations.ForeignConstraints;
-import com.fw.persistence.annotations.IdField;
 import com.fw.persistence.annotations.Index;
 import com.fw.persistence.annotations.Indexed;
 import com.fw.persistence.annotations.Indexes;
 import com.fw.persistence.annotations.Mapping;
 import com.fw.persistence.annotations.MappingCondition;
-import com.fw.persistence.annotations.ReadOnly;
-import com.fw.persistence.annotations.Table;
-import com.fw.persistence.annotations.TransientField;
 import com.fw.persistence.annotations.UniqueConstraint;
 import com.fw.persistence.annotations.UniqueConstraints;
 import com.fw.persistence.conversion.ConversionService;
@@ -235,7 +236,7 @@ public class EntityDetailsFactory
 		}
 
 		FieldAccess fieldAccess = entityType.getAnnotation(FieldAccess.class);
-		entityDetails = new EntityDetails(table.value(), entityType);
+		entityDetails = new EntityDetails(table.name(), entityType);
 		AccessType accessType = (fieldAccess == null) ? AccessType.ALL : fieldAccess.value(); 
 		
 		Class<?> cls = entityType;
@@ -326,12 +327,6 @@ public class EntityDetailsFactory
 			logger.debug("As no column mapping found, assuming table needs to be created.");
 			createRequiredTable(entityDetails, dataStore);
 		}
-		else
-		{
-			//Validate that audit table, if any, is having all the required columns
-				//if required created audit table
-			checkAuditTable(entityDetails, dataStore, createTables);
-		}
 
 		//check if id field is specified
 		if(entityDetails.getIdField() == null)
@@ -351,18 +346,20 @@ public class EntityDetailsFactory
 		String columnName = null;
 		Indexed indexed = null;
 		DataType dbType = null;
+		DataTypeMapping dataTypeMapping = null;
 		
 		for(Field field: fields)
 		{
 			if(
 				Modifier.isStatic(field.getModifiers())
-				|| field.getAnnotation(TransientField.class) != null	
+				|| field.getAnnotation(Transient.class) != null	
 			  )
 			{
 				continue;
 			}
 			
 			column = field.getAnnotation(Column.class);
+			dataTypeMapping = field.getAnnotation(DataTypeMapping.class);
 			
 			if(column == null && accessType == AccessType.DECLARED_ONLY)
 			{
@@ -370,7 +367,7 @@ public class EntityDetailsFactory
 			}
 			
 			columnName = (column != null && column.name().length() > 0) ? column.name().trim() : field.getName();
-			dbType = (column != null) ? column.type() : DataType.UNKNOWN;
+			dbType = (dataTypeMapping != null) ? dataTypeMapping.type() : DataType.UNKNOWN;
 			
 			//flatten the column name
 			columnName = columnName.replaceAll(SPECIAL_CHAR_PATTERN, "");
@@ -431,24 +428,37 @@ public class EntityDetailsFactory
 	private static FieldDetails buildFieldDetails(Field field, String columnName, DataType dataType, EntityDetails entityDetails)
 	{
 		FieldDetails fieldDetails = null;
-		IdField idField = field.getAnnotation(IdField.class);
+		Id idField = field.getAnnotation(Id.class);
+		GeneratedValue generatedValue = field.getAnnotation(GeneratedValue.class);
 
 		if(idField == null)
 		{
-			fieldDetails = new FieldDetails(field, columnName, dataType, (field.getAnnotation(ReadOnly.class) != null) );
+			fieldDetails = new FieldDetails(field, columnName, dataType);
 			
 			logger.trace("Adding field details {} to entity {}", fieldDetails, entityDetails);
 		}
 		else
 		{
-			String sequenceName = idField.sequenceName();
+			AutoFetchType autoFetchAnnot = field.getAnnotation(AutoFetchType.class);
 			
-			if(idField.autogeneration() == AutogenerationType.SEQUENCE && (sequenceName == null || sequenceName.trim().length() == 0))
+			String sequenceName = (generatedValue != null) ? generatedValue.generator() : null;
+			GenerationType generationType = (generatedValue != null) ? generatedValue.strategy() : null;
+			boolean autoFetch = (autoFetchAnnot != null) ? autoFetchAnnot.value() : true;
+			
+			//if invalid generation type is specified but not supported
+			if(generationType != null && generationType != GenerationType.IDENTITY && generationType != GenerationType.SEQUENCE)
+			{
+				throw new IllegalStateException(String.format("Invalid generation-type '%s' specified for field '%s' of entity - %s", 
+						generationType, field.getName(), entityDetails.getEntityType().getName()));
+			}
+			
+			//if generation type is sequence, get sequence name
+			if(generationType == GenerationType.SEQUENCE && (sequenceName == null || sequenceName.trim().length() == 0))
 			{
 				sequenceName = "SEQ_" + entityDetails.getEntityType().getSimpleName().toUpperCase() + "_" + field.getName().toUpperCase();
 			}
 			
-			fieldDetails = new FieldDetails(field, columnName, dataType, true, idField.autogeneration(), idField.autofetch(), true, sequenceName);
+			fieldDetails = new FieldDetails(field, columnName, dataType, true, generationType, autoFetch, sequenceName);
 			
 			logger.trace("Adding ID field details {} to entity {}", fieldDetails, entityDetails);
 		}
@@ -475,48 +485,6 @@ public class EntityDetailsFactory
 		}
 	}
 	
-	private static FieldDetails buildFieldDetailsWithOverriddenColumn(Field field, String columnName, DataType dataType, EntityDetails entityDetails)
-	{
-		FieldDetails fieldDetails = buildFieldDetails(field, columnName, dataType, entityDetails);
-		fieldDetails.setOverriddenColumnName(columnName);
-		
-		return fieldDetails;
-	}
-	
-	private static EntityDetails getAuditEntityDetails(EntityDetails entityDetails)
-	{
-		Audit audit = entityDetails.getEntityType().getAnnotation(Audit.class);
-		
-		if(audit == null)
-		{
-			return null;
-		}
-		
-		Class<?> auditClass = AuditEntryEntity.class;
-		String tableName = audit.table();
-		
-		//if table name is not specified 
-		tableName = (tableName != null && tableName.trim().length() > 0) ? tableName : "AUDIT_" + entityDetails.getTableName();
-		
-		EntityDetails auditEntityDetails = entityDetails.cloneForAudit(tableName);
-		
-		try
-		{
-			buildFieldDetailsWithOverriddenColumn(auditClass.getDeclaredField("_auditId"), audit.idColumn(), DataType.STRING, auditEntityDetails);
-			buildFieldDetailsWithOverriddenColumn(auditClass.getDeclaredField("_auditType"), audit.typeColumn(), DataType.STRING, auditEntityDetails);
-			buildFieldDetailsWithOverriddenColumn(auditClass.getDeclaredField("_auditTime"), audit.timeColumn(), DataType.DATE_TIME, auditEntityDetails);
-			buildFieldDetailsWithOverriddenColumn(auditClass.getDeclaredField("_auditChangedBy"), audit.changedByColumn(), DataType.STRING, auditEntityDetails);
-			
-			AuditDetails auditDetails = new AuditDetails(tableName, audit.idColumn(), audit.typeColumn(), audit.timeColumn(), audit.changedByColumn());
-			entityDetails.setAuditDetails(auditDetails);
-		}catch(Exception ex)
-		{
-			throw new IllegalStateException("An error occurred while setting default fields on Audit entity, ", ex);
-		}
-
-		return auditEntityDetails;
-	}
-	
 	/**
 	 * Creates required tables, sequences, indexes etc, required by this entity
 	 * @param entityDetails
@@ -527,7 +495,7 @@ public class EntityDetailsFactory
 		FieldDetails idFieldDetails = entityDetails.getIdField();
 		
 		//check if sequence needs to be created for id field, if yes, create it
-		if(idFieldDetails != null && idFieldDetails.getAutogenerationType() == AutogenerationType.SEQUENCE)
+		if(idFieldDetails != null && idFieldDetails.getGenerationType() == GenerationType.SEQUENCE)
 		{
 			dataStore.checkAndCreateSequence(idFieldDetails.getSequenceName());
 		}
@@ -557,74 +525,6 @@ public class EntityDetailsFactory
 			}
 			
 			dataStore.createIndex(new CreateIndexQuery(entityDetails, index.getName(), columns));
-		}
-		
-		//Check and create if audit table is required
-		EntityDetails auditEntityDetails = getAuditEntityDetails(entityDetails);
-		
-		if(auditEntityDetails != null)
-		{
-			//create the audit table
-			CreateTableQuery createAuditTableQuery = new CreateTableQuery(auditEntityDetails);
-			dataStore.createTable(createAuditTableQuery);
-		}
-	}
-	
-	/**
-	 * Checks if audit table is present and validates all mandatory columns are present. If table 
-	 * itself is not present, create table if "createTables" is true.
-	 *  
-	 * @param entityDetails
-	 * @param dataStore
-	 * @param createTables
-	 */
-	private static void checkAuditTable(EntityDetails entityDetails, IDataStore dataStore, boolean createTables)
-	{
-		EntityDetails auditEntityDetails = getAuditEntityDetails(entityDetails);
-		
-		if(auditEntityDetails == null)
-		{
-			return;
-		}
-		
-		Map<String, String> flattenColumnMap = null;
-		
-		try
-		{
-			//try to fetch columns of required audit table
-			flattenColumnMap = flattenColumnNames(auditEntityDetails.getTableName(), dataStore);
-		}catch(RuntimeException ex)
-		{
-			//exception is thrown when the audit table does not exist, if create-table flag is false throw exception
-			if(!createTables)
-			{
-				logger.error("An error occurred while fetching coumns from table - " + auditEntityDetails.getTableName(), ex);
-				throw ex;
-			}
-			
-			//if create-tables flag is set, try to create audit table
-			logger.info("An error occurred while fetching column details for table '" + auditEntityDetails.getTableName() + "'. Assuming table does not exist and needs to be created");
-			
-			//create the audit table
-			CreateTableQuery createAuditTableQuery = new CreateTableQuery(auditEntityDetails);
-			dataStore.createTable(createAuditTableQuery);
-			return;
-		}
-		
-		//Get all the columns needed by audit entity
-		Set<String> auditEntityColumns = new HashSet<String>(auditEntityDetails.getColumns());
-		
-		//loop through audit table columns and remove found one from entity columns
-		for(String column: flattenColumnMap.values())
-		{
-			auditEntityColumns.remove(column);
-		}
-		
-		//if any entity columns are left over, tan that means some mandatory columns are missing in target audit tale
-		if(!auditEntityColumns.isEmpty())
-		{
-			throw new InvalidMappingException("Mandatory audit columns are missing in '" + 
-						auditEntityDetails.getTableName() + "' audit-table. Missing Columns: " + auditEntityColumns);
 		}
 	}
 }

@@ -3,7 +3,6 @@ package com.fw.persistence.repository;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
@@ -11,7 +10,6 @@ import java.util.function.Function;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.fw.persistence.AuditSearchQuery;
 import com.fw.persistence.EntityDetails;
 import com.fw.persistence.ICrudRepository;
 import com.fw.persistence.IDataStore;
@@ -33,8 +31,6 @@ class RepositoryProxy implements InvocationHandler
 		defaultedMethods.put("getEntityDetails", this::getEntityDetails);
 		defaultedMethods.put("newTransaction", this::newTransaction);
 		defaultedMethods.put("currentTransaction", this::currentTransaction);
-		defaultedMethods.put("clearAuditEntries", this::clearAuditEntries);
-		defaultedMethods.put("fetchAuditRecords", this::fetchAuditRecords);
 
 		this.dataStore = dataStore;
 		this.entityDetails = entityDetails;
@@ -122,16 +118,4 @@ class RepositoryProxy implements InvocationHandler
 			throw new IllegalStateException(e);
 		}
 	}
-	
-	private Object clearAuditEntries(Object args[])
-	{
-		dataStore.clearAudit(entityDetails, (Date)args[0]);
-		return null;
-	}
-	
-	private Object fetchAuditRecords(Object args[])
-	{
-		return dataStore.fetchAuditEntries(entityDetails, (AuditSearchQuery)args[0]);
-	}
-	
 }

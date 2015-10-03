@@ -64,8 +64,14 @@ update/insert query methods should accept implicit values for fields
 	Similarly finders/updaters/deleters should be able to accept implicit conditions
 		This will be helpful in writing methods like deleteInactiveJobs()
 
-Audit Entries
-=============
-	Know Problem - during update, if the columns used in conditions are getting updated, the auditing may not be proper
-	Without unique column during addition audit entries are not added properly
-	Fetch Audit entries function should also support conditions and condition fields should be limited to entity fields and audit-entity fields 
+============================================================================
+============================================================================
+
+Support for proper foreign keys
+	Ability to support all type of relations
+	Ability to support intermediate table (without need of entity)
+Support to fetch beans - for search queries
+	Return bean property mapping - LOV queries
+	
+Fix conversion service to use BeanUtils or apache commons
+

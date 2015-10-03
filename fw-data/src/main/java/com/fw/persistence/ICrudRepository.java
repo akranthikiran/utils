@@ -1,7 +1,6 @@
 package com.fw.persistence;
 
 import java.util.Date;
-import java.util.List;
 
 public interface ICrudRepository<E>
 {
@@ -13,8 +12,6 @@ public interface ICrudRepository<E>
 	
 	//audit related functions
 	public void clearAuditEntries(Date tillDate);
-	
-	public List<Record> fetchAuditRecords(AuditSearchQuery query);
 	
 	/**
 	 * Saves the entity to underlying store

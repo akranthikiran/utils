@@ -9,7 +9,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.fw.ccg.util.StringUtil;
-import com.fw.persistence.AuditType;
 import com.fw.persistence.EntityDetails;
 import com.fw.persistence.FieldDetails;
 import com.fw.persistence.ForeignConstraintDetails;
@@ -20,7 +19,6 @@ import com.fw.persistence.Record;
 import com.fw.persistence.UniqueConstraintDetails;
 import com.fw.persistence.UniqueConstraintViolationException;
 import com.fw.persistence.conversion.ConversionService;
-import com.fw.persistence.query.AuditEntryQuery;
 import com.fw.persistence.query.ConditionParam;
 import com.fw.persistence.query.ExistenceQuery;
 import com.fw.persistence.query.FinderQuery;
@@ -237,37 +235,4 @@ public abstract class AbstractPersistQueryExecutor extends QueryExecutor
 		return idValue;
 	}
 
-	/**
-	 * Adds audit entries if needed and enabled.
-	 * 
-	 * @param context
-	 * @param dataStore
-	 * @param entityDetails
-	 * @param conditions
-	 */
-	protected void addAuditEntries(IDataStore dataStore, EntityDetails entityDetails, AuditType auditType, ConditionParam... conditions)
-	{
-		//if entity does not need Audit return
-		if(!entityDetails.isAuditRequired())
-		{
-			return;
-		}
-		
-		//if audit is disabled for current context, return
-		if(!context.isAuditEnabled())
-		{
-			logger.debug("As audit was disabled in persistence-context skipping audit for entity: " + entityDetails.getEntityType().getName());
-			return;
-		}
-		
-		//create audit query and add provided conditions
-		AuditEntryQuery auditQuery = new AuditEntryQuery(entityDetails, auditType, context.getCurrentUser());
-		
-		for(ConditionParam conditionParam: conditions)
-		{
-			auditQuery.addCondition(conditionParam);
-		}
-		
-		dataStore.addAuditEntries(auditQuery);
-	}
 }

@@ -29,8 +29,6 @@ public class EntityDetails
 
 	private FieldDetails idField;
 
-	private AuditDetails auditDetails;
-
 	public EntityDetails(String tableName, Class<?> entityType)
 	{
 		if(tableName == null || tableName.trim().length() == 0)
@@ -246,26 +244,11 @@ public class EntityDetails
 		return indexDetailsList;
 	}
 
-	public AuditDetails getAuditDetails()
-	{
-		return auditDetails;
-	}
-
-	public void setAuditDetails(AuditDetails auditDetails)
-	{
-		this.auditDetails = auditDetails;
-	}
-
 	public Set<String> getColumns()
 	{
 		return Collections.unmodifiableSet(columnToDetails.keySet());
 	}
 	
-	public boolean isAuditRequired()
-	{
-		return (this.auditDetails != null);
-	}
-
 	/* (non-Javadoc)
 	 * @see java.lang.Object#toString()
 	 */

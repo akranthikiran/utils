@@ -6,21 +6,16 @@ import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import javax.persistence.Table;
 
 import com.fw.persistence.EntityDetails;
 import com.fw.persistence.EntityDetailsFactory;
 import com.fw.persistence.ICrudRepository;
 import com.fw.persistence.IDataStore;
-import com.fw.persistence.IPersistenceContext;
 import com.fw.persistence.InvalidMappingException;
-import com.fw.persistence.annotations.Table;
 
 public class RepositoryFactory
 {
-	private static final Logger logger = LogManager.getLogger(RepositoryFactory.class);
-	
 	private IDataStore dataStore;
 	
 	private Map<Class<?>, ICrudRepository<?>> typeToRepo = new HashMap<>();
@@ -29,8 +24,6 @@ public class RepositoryFactory
 	private boolean createTables;
 	
 	private ExecutorFactory executorFactory;
-	
-	private IPersistenceContext persistenceContext;
 	
 	public IDataStore getDataStore()
 	{
@@ -56,14 +49,7 @@ public class RepositoryFactory
 	{
 		if(executorFactory == null)
 		{
-			if(persistenceContext == null)
-			{
-				logger.warn("As not persistence context is specified, using no-audit persistence context");
-				
-				persistenceContext = new NoAuditPersistenceContext();
-			}
-			
-			executorFactory = new ExecutorFactory(new PersistenceExecutionContext(this, persistenceContext));
+			executorFactory = new ExecutorFactory(new PersistenceExecutionContext(this));
 		}
 		
 		return executorFactory;
@@ -74,16 +60,6 @@ public class RepositoryFactory
 		this.executorFactory = executorFactory;
 	}
 	
-	public IPersistenceContext getPersistenceContext()
-	{
-		return persistenceContext;
-	}
-
-	public void setPersistenceContext(IPersistenceContext persistenceContext)
-	{
-		this.persistenceContext = persistenceContext;
-	}
-
 	private Type fetchRepositoryType(Class<?> repoType)
 	{
 		if(!ICrudRepository.class.isAssignableFrom(repoType))

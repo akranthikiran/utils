@@ -2,19 +2,18 @@ package com.fw.persistence.repository.executors;
 
 import java.lang.reflect.Method;
 
+import javax.persistence.GenerationType;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.fw.persistence.AuditType;
 import com.fw.persistence.EntityDetails;
 import com.fw.persistence.FieldDetails;
 import com.fw.persistence.ICrudRepository;
 import com.fw.persistence.IDataStore;
 import com.fw.persistence.ITransaction;
-import com.fw.persistence.annotations.AutogenerationType;
 import com.fw.persistence.conversion.ConversionService;
 import com.fw.persistence.query.ColumnParam;
-import com.fw.persistence.query.ConditionParam;
 import com.fw.persistence.query.SaveQuery;
 import com.fw.persistence.repository.InvalidRepositoryException;
 
@@ -75,12 +74,12 @@ public class SaveQueryExecutor extends AbstractPersistQueryExecutor
 		{
 			if(field.isIdField())
 			{
-				if(field.getAutogenerationType() == AutogenerationType.AUTO)
+				if(field.getGenerationType() == GenerationType.IDENTITY)
 				{
 					continue;
 				}
 				
-				if(field.getAutogenerationType() == AutogenerationType.SEQUENCE)
+				if(field.getGenerationType() == GenerationType.SEQUENCE)
 				{
 					query.addColumn(new ColumnParam(field.getColumn(), null, -1, field.getSequenceName()));
 					continue;
@@ -100,18 +99,11 @@ public class SaveQueryExecutor extends AbstractPersistQueryExecutor
 		{
 			int res = dataStore.save(query, entityDetails);
 			
-			//fetch the newly save entry id and populate it to entity
-			Object idValue = fetchId(entity, dataStore, conversionService);
-			
-			//check and add audit entries
-			if(idValue != null)
-			{			
-				addAuditEntries(dataStore, entityDetails, AuditType.INSERT,
-						new ConditionParam(entityDetails.getIdField().getColumn(), entityDetails.getIdField().getValue(entity), 0));
-			}
-			else if(entityDetails.isAuditRequired())
+			//if insert was successful
+			if(res > 0)
 			{
-				logger.warn("Unable to determine newly added record id (might be because of missing unique keys or missing data). So skipping auditing record insertions");
+				//fetch the newly save entry id and populate it to entity
+				fetchId(entity, dataStore, conversionService);
 			}
 			
 			transaction.commit();

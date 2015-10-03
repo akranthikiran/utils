@@ -7,7 +7,6 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.fw.persistence.AuditType;
 import com.fw.persistence.EntityDetails;
 import com.fw.persistence.FieldDetails;
 import com.fw.persistence.ICrudRepository;
@@ -132,7 +131,7 @@ public class UpdateQueryExecutor extends AbstractPersistQueryExecutor
 		
 		for(FieldDetails field: entityDetails.getFieldDetails())
 		{
-			if(field.isIdField() ||	field.isReadOnly() )
+			if(field.isIdField())
 			{
 				continue;
 			}
@@ -190,12 +189,6 @@ public class UpdateQueryExecutor extends AbstractPersistQueryExecutor
 			try(ITransaction transaction = dataStore.getTransactionManager().newOrExistingTransaction())
 			{
 				int res = dataStore.update(updateQuery, entityDetails);
-				
-				//if there were updates, check and add audit entries
-				if(res > 0)
-				{
-					super.addAuditEntries(dataStore, entityDetails, AuditType.UPDATE, updateQuery.getConditions().toArray(new ConditionParam[0]));
-				}
 				
 				if(int.class.equals(returnType))
 				{

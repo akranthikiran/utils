@@ -13,7 +13,6 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -25,7 +24,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.fw.ccg.xml.XMLBeanParser;
-import com.fw.persistence.AuditSearchQuery;
 import com.fw.persistence.EntityDetails;
 import com.fw.persistence.IDataStore;
 import com.fw.persistence.ITransaction;
@@ -35,7 +33,6 @@ import com.fw.persistence.Record;
 import com.fw.persistence.TransactionWrapper;
 import com.fw.persistence.UnsupportedOperationException;
 import com.fw.persistence.conversion.ConversionService;
-import com.fw.persistence.query.AuditEntryQuery;
 import com.fw.persistence.query.ChildrenExistenceQuery;
 import com.fw.persistence.query.ColumnParam;
 import com.fw.persistence.query.ConditionParam;
@@ -760,58 +757,6 @@ public class RdbmsDataStore implements IDataStore
 			closeResources(null, pstmt);
 		}
 	}
-
-	@Override
-	public void addAuditEntries(AuditEntryQuery auditQuery)
-	{
-		logger.trace("Started method: addAuditEntries");
-		logger.debug("Adding audit entries to table '{}' using query: {}", auditQuery.getAuditTableName(), auditQuery);
-		
-		PreparedStatement pstmt = null;
-		
-		try(TransactionWrapper<RdbmsTransaction> transaction = transactionManager.newOrExistingTransaction())
-		{
-			String query = templates.buildQuery(RdbmsConfiguration.AUDIT_ENTRY_QUERY, "query", auditQuery);
-			
-			logger.debug("Built audit query as: \n\t{}", query);
-			
-			Connection connection = transaction.getTransaction().getConnection();
-			pstmt = connection.prepareStatement(query);
-			int index = 1;
-			List<Object> params = new ArrayList<>();
-			
-			for(ColumnParam column: auditQuery.getAuditColumns())
-			{
-				pstmt.setObject(index, column.getValue());
-				params.add(column.getValue());
-				
-				index++;
-			}
-			
-			for(ConditionParam condition: auditQuery.getConditions())
-			{
-				pstmt.setObject(index, condition.getValue());
-				params.add(condition.getValue());
-				
-				index++;
-			}
-			
-			logger.debug("Executing using params: {}", params);
-			
-			int deleteCount = pstmt.executeUpdate();
-			
-			logger.debug("Added " + deleteCount + " audit-entries to table: " + auditQuery.getTableName());
-			
-			transaction.commit();
-		}catch(Exception ex)
-		{
-			logger.error("An error occurred while adding audit entries to table '" + auditQuery.getAuditTableName() + "' using query: " + auditQuery, ex);
-			throw new PersistenceException("An error occurred while adding audit entries to table '" + auditQuery.getAuditTableName() + "' using query: " + auditQuery, ex);
-		}finally
-		{
-			closeResources(null, pstmt);
-		}
-	}
 	
 	protected PreparedStatement buildPreparedStatement(RdbmsTransaction transaction, String queryName, Object... params) throws SQLException
 	{
@@ -929,30 +874,6 @@ public class RdbmsDataStore implements IDataStore
 		
 	}
 	
-	@Override
-	public void clearAudit(EntityDetails entityDetails, Date tillDate)
-	{
-		logger.trace("Started method: clearAudit");
-		
-		int count = executeUpdate(RdbmsConfiguration.AUDIT_CLEAR_QUERY, 
-				entityDetails.getAuditDetails().getTableName(),  
-				"auditDetails", entityDetails.getAuditDetails(),
-				"tillDate", tillDate);
-		
-		logger.debug("Deleted {} audit records from table {}", count, entityDetails.getAuditDetails().getTableName());
-	}
-
-	@Override
-	public List<Record> fetchAuditEntries(EntityDetails entityDetails, AuditSearchQuery query)
-	{
-		logger.trace("Started method: fetchAuditEntries");
-		
-		return fetchRecords(RdbmsConfiguration.AUDIT_FETCH_QUERY, entityDetails.getAuditDetails().getTableName(), 
-				"auditDetails", entityDetails.getAuditDetails(),
-				"query", query,
-				"entityDetails", entityDetails);
-	}
-
 	private char[] convertClob(Clob clob)
 	{
 		try

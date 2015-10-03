@@ -8,14 +8,14 @@ import java.sql.Clob;
 import org.apache.commons.io.IOUtils;
 
 import com.fw.persistence.annotations.DataType;
-import com.fw.persistence.conversion.FieldConverter;
+import com.fw.persistence.annotations.DataTypeMapping;
 import com.fw.persistence.conversion.IPersistenceConverter;
 
 import conm.fw.common.util.JsonWrapper;
 
 /**
  * This is not a default converter, if needed, this needs to be used explicitly on target entity fields
- * using {@link FieldConverter}. 
+ * using {@link DataTypeMapping}. 
  * 
  * This converters converts any object into json string. And the converted string is expected to be persisted into db (in VARCHAR, CLOB, BLOB) columns.
  * 

@@ -8,7 +8,6 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.fw.persistence.AuditType;
 import com.fw.persistence.ChildConstraintViolationException;
 import com.fw.persistence.EntityDetails;
 import com.fw.persistence.FieldDetails;
@@ -199,9 +198,6 @@ public class DeleteQueryExecutor extends AbstractPersistQueryExecutor
 			
 			processChildConstraints(dataStore, conversionService, params);
 
-			//add audit entries based on same conditions as delete
-			super.addAuditEntries(dataStore, entityDetails, AuditType.DELETE, deleteQuery.getConditions().toArray(new ConditionParam[0]));
-			
 			int res = dataStore.delete(deleteQuery, entityDetails);
 			
 			transaction.commit();
