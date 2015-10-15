@@ -11,7 +11,7 @@ import java.util.Map;
 
 import com.fw.persistence.EntityDetails;
 import com.fw.persistence.repository.executors.DeleteQueryExecutor;
-import com.fw.persistence.repository.executors.ExistenceQueryExecutor;
+import com.fw.persistence.repository.executors.CountQueryExecutor;
 import com.fw.persistence.repository.executors.FinderQueryExecutor;
 import com.fw.persistence.repository.executors.QueryExecutor;
 import com.fw.persistence.repository.executors.QueryExecutorPattern;
@@ -19,12 +19,37 @@ import com.fw.persistence.repository.executors.SaveOrUpdateQueryExecutor;
 import com.fw.persistence.repository.executors.SaveQueryExecutor;
 import com.fw.persistence.repository.executors.UpdateQueryExecutor;
 
+/**
+ * Factory to get query executor for specified repository method. A query executor for a repository method can be determined using
+ * 		1) Annotations on repository method
+ * 		2) Method name prefixes
+ * 
+ * This configuration (whether and what annotation to use or prefixes to be used or excluded) is defined using annotaion {@link QueryExecutorPattern} on the
+ * executor class being registered.
+ * @author akiran
+ */
 public class ExecutorFactory
 {
+	/**
+	 * Executor details like which constructor to use for executor creation. And which method prefixes or suffixes to be used to match
+	 * repository method.
+	 * @author akiran
+	 */
 	private static class ExecutorDetails
 	{
+		/**
+		 * Constructor for executor creation
+		 */
 		private Constructor<?> constructor;
+		
+		/**
+		 * Prefixes to be used for repository method matching
+		 */
 		private String prefixes[];
+		
+		/**
+		 * Prefixes to be excluded during repository method match
+		 */
 		private String excludePrefixes[];
 		
 		public ExecutorDetails(Constructor<?> constructor, String prefixes[], String excludePrefixes[])
@@ -34,6 +59,14 @@ public class ExecutorFactory
 			this.excludePrefixes = excludePrefixes;
 		}
 		
+		/**
+		 * Creates new query executor with specified details
+		 * @param persistenceExecutionContext
+		 * @param repositoryType Repository type
+		 * @param method matched repository method
+		 * @param entityDetails Target entity details
+		 * @return
+		 */
 		public QueryExecutor newQueryExecutor(PersistenceExecutionContext persistenceExecutionContext, Class<?> repositoryType, Method method, EntityDetails entityDetails)
 		{
 			try
@@ -48,24 +81,34 @@ public class ExecutorFactory
 			}
 		}
 		
+		/**
+		 * Checks if the specified method name matches with the current executor prefix conditions
+		 * @param methodName
+		 * @return
+		 */
 		public boolean isMatchingMethodName(String methodName)
 		{
+			//if no prefixes are specified return mismatch
 			if(this.prefixes == null)
 			{
 				return false;
 			}
 			
+			//check if method name has excluded prefixes
 			if(this.excludePrefixes != null)
 			{
 				for(String exPrefix: this.excludePrefixes)
 				{
+					//if name matches with any of excluded prefix
 					if(methodName.startsWith(exPrefix))
 					{
+						//return mismatch
 						return false;
 					}
 				}
 			}
 			
+			//check if method name matches with any of the specified prefix
 			for(String prefix: this.prefixes)
 			{
 				if(methodName.startsWith(prefix))
@@ -74,11 +117,20 @@ public class ExecutorFactory
 				}
 			}
 			
+			//if no prefix condition matched, return mismatch
 			return false;
 		}
 	}
 	
+	/**
+	 * Maintains list of supported executor details
+	 */
 	private List<ExecutorDetails> executorDetailsLst = new ArrayList<>();
+	
+	/**
+	 * List of annotation mappings to be used to match repository methods to 
+	 * executor
+	 */
 	private Map<Class<?>, ExecutorDetails> annotationToDetails = new HashMap<>();
 	
 	private PersistenceExecutionContext persistenceExecutionContext;
@@ -90,9 +142,12 @@ public class ExecutorFactory
 		this.persistenceExecutionContext = persistenceExecutionContext;
 	}
 	
+	/**
+	 * Registers default executors
+	 */
 	protected void registerDefaultExecutors()
 	{
-		registerExecutor(ExistenceQueryExecutor.class);
+		registerExecutor(CountQueryExecutor.class);
 		registerExecutor(FinderQueryExecutor.class);
 		registerExecutor(SaveOrUpdateQueryExecutor.class);
 		registerExecutor(SaveQueryExecutor.class);
@@ -100,21 +155,29 @@ public class ExecutorFactory
 		registerExecutor(UpdateQueryExecutor.class);
 	}
 
+	/**
+	 * Registers specified executor type
+	 * @param executorType
+	 */
 	public void registerExecutor(Class<? extends QueryExecutor> executorType)
 	{
 		QueryExecutorPattern executorPattern = executorType.getAnnotation(QueryExecutorPattern.class);
 		
+		//if QueryExecutorPattern is not specified on target type
 		if(executorPattern == null)
 		{
 			throw new IllegalArgumentException("Specified executor-type is not annotated with @QueryExecutorPattern - " + executorType.getName());
 		}
 		
+		//fetch prefix match conditions
 		String prefixes[] = executorPattern.prefixes();
 		prefixes = prefixes.length == 0 ? null : prefixes;
 
+		//fetch prefix conditions that should not match
 		String excludePrefixes[] = executorPattern.excludePrefixes();
 		excludePrefixes = excludePrefixes.length == 0 ? null : excludePrefixes;
 
+		//check if executor can be matched using annotation
 		Class<?> annotationType = executorPattern.annotatedWith();
 		
 		if(prefixes == null && Annotation.class.equals(annotationType))
@@ -122,6 +185,7 @@ public class ExecutorFactory
 			throw new IllegalArgumentException("Neither prefix not annotated-with is specified in @QueryExecutorPattern annotation of - " + executorType.getName());
 		}
 		
+		//ensure required constructor is defined and get it for instance creation
 		Constructor<?> constructor = null;
 		
 		try
@@ -151,6 +215,7 @@ public class ExecutorFactory
 		Annotation annotaions[] = method.getAnnotations();
 		ExecutorDetails details = null;
 		
+		//based on annotations, check if match between repository method and exeutor can be done
 		for(Annotation annotaion: annotaions)
 		{
 			details = annotationToDetails.get(annotaion.annotationType());
@@ -161,8 +226,10 @@ public class ExecutorFactory
 			}
 		}
 		
+		//if match can not be done using annotation
 		String methodName = method.getName();
 		
+		//try if match can be done based on method name prefix conditions
 		for(ExecutorDetails executorDetails: this.executorDetailsLst)
 		{
 			if(executorDetails.isMatchingMethodName(methodName))

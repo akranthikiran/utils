@@ -20,6 +20,11 @@ public class FieldDetails
 	
 	private String overriddenColumnName;
 	
+	/**
+	 * Foreign constraint on this field, if specified
+	 */
+	private ForeignConstraintDetails foreignConstraintDetails;
+	
 	private FieldDetails(FieldDetails details)
 	{
 		this.field = details.field;
@@ -146,6 +151,42 @@ public class FieldDetails
 	public FieldDetails cloneForAudit()
 	{
 		return new FieldDetails(this);
+	}
+	
+	
+
+	/**
+	 * @return the {@link #foreignConstraintDetails foreignConstraintDetails}
+	 */
+	public ForeignConstraintDetails getForeignConstraintDetails()
+	{
+		return foreignConstraintDetails;
+	}
+
+	/**
+	 * @param foreignConstraintDetails the {@link #foreignConstraintDetails foreignConstraintDetails} to set
+	 */
+	public void setForeignConstraintDetails(ForeignConstraintDetails foreignConstraintDetails)
+	{
+		this.foreignConstraintDetails = foreignConstraintDetails;
+	}
+	
+	/**
+	 * Returns true, if this field indicates a relation to other entity
+	 * @return
+	 */
+	public boolean isRelationField()
+	{
+		return (foreignConstraintDetails != null);
+	}
+	
+	/**
+	 * Returns true, if this field is relation field but relation is not owned by current entity
+	 * @return
+	 */
+	public boolean isMappedRelationField()
+	{
+		return (foreignConstraintDetails != null && foreignConstraintDetails.isMappedRelation());
 	}
 
 	/* (non-Javadoc)

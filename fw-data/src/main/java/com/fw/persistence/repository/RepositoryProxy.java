@@ -14,6 +14,7 @@ import com.fw.persistence.EntityDetails;
 import com.fw.persistence.ICrudRepository;
 import com.fw.persistence.IDataStore;
 import com.fw.persistence.TransactionException;
+import com.fw.persistence.query.DropTableQuery;
 import com.fw.persistence.repository.executors.QueryExecutor;
 
 class RepositoryProxy implements InvocationHandler
@@ -25,15 +26,19 @@ class RepositoryProxy implements InvocationHandler
 	private EntityDetails entityDetails;
 
 	private Map<String, Function<Object[], Object>> defaultedMethods = new HashMap<>();
+	private Class<? extends ICrudRepository<?>> repositoryType;
 	
 	public RepositoryProxy(IDataStore dataStore, Class<? extends ICrudRepository<?>> repositoryType, EntityDetails entityDetails, ExecutorFactory executorFactory)
 	{
 		defaultedMethods.put("getEntityDetails", this::getEntityDetails);
 		defaultedMethods.put("newTransaction", this::newTransaction);
 		defaultedMethods.put("currentTransaction", this::currentTransaction);
+		defaultedMethods.put("dropEntityTable", this::dropEntityTable);
+		defaultedMethods.put("getRepositoryType", this::getRepositoryType);
 
 		this.dataStore = dataStore;
 		this.entityDetails = entityDetails;
+		this.repositoryType = repositoryType;
 		
 		Method methods[] = repositoryType.getMethods();
 		String methodName = null;
@@ -118,4 +123,26 @@ class RepositoryProxy implements InvocationHandler
 			throw new IllegalStateException(e);
 		}
 	}
+	
+	/**
+	 * Drops current entity table
+	 * @param args
+	 * @return
+	 */
+	private Object dropEntityTable(Object args[])
+	{
+		dataStore.dropTable(new DropTableQuery(entityDetails));
+		return null;
+	}
+	
+	/**
+	 * Gets actual repository type of this instance
+	 * @param args
+	 * @return
+	 */
+	private Object getRepositoryType(Object args[])
+	{
+		return repositoryType;
+	}
+	
 }

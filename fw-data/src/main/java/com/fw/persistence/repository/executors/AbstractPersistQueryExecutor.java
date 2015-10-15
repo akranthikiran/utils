@@ -20,7 +20,7 @@ import com.fw.persistence.UniqueConstraintDetails;
 import com.fw.persistence.UniqueConstraintViolationException;
 import com.fw.persistence.conversion.ConversionService;
 import com.fw.persistence.query.ConditionParam;
-import com.fw.persistence.query.ExistenceQuery;
+import com.fw.persistence.query.CountQuery;
 import com.fw.persistence.query.FinderQuery;
 
 public abstract class AbstractPersistQueryExecutor extends QueryExecutor
@@ -41,7 +41,7 @@ public abstract class AbstractPersistQueryExecutor extends QueryExecutor
 	{
 		logger.trace("Started method: checkForUniqueConstraints");
 		
-		ExistenceQuery existenceQuery = new ExistenceQuery(entityDetails);
+		CountQuery existenceQuery = new CountQuery(entityDetails);
 		FieldDetails fieldDetails = null;
 		Object value = null;
 		String message = null;
@@ -74,7 +74,7 @@ public abstract class AbstractPersistQueryExecutor extends QueryExecutor
 				existenceQuery.addCondition(new ConditionParam(entityDetails.getIdField().getColumn(), Operator.NE, entityDetails.getIdField().getValue(entity), -1));
 			}
 			
-			if(dataStore.checkForExistenence(existenceQuery, entityDetails) > 0)
+			if(dataStore.getCount(existenceQuery, entityDetails) > 0)
 			{
 				message = formatMessage(uniqueConstraint.getMessage(), fieldValues);
 				message = (message != null) ? message : "Unique constraint violated: " + uniqueConstraint.getName();
@@ -86,101 +86,53 @@ public abstract class AbstractPersistQueryExecutor extends QueryExecutor
 	
 	protected void checkForForeignConstraints(IDataStore dataStore, ConversionService conversionService, Object entity)
 	{
+		//if explicit foreign key validation is not required
+		if(!dataStore.isExplicitForeignCheckRequired())
+		{
+			return;
+		}
+		
 		logger.trace("Started method: checkForForeignConstraints");
 		
-		ExistenceQuery existenceQuery = null;
-		FieldDetails fieldDetails = null;
+		CountQuery existenceQuery = null;
 		Object value = null;
 		String message = null;
 		EntityDetails foreignEntityDetails = null;
-		FieldDetails foreignFieldDetails = null;
-		Map<String, String> fieldToForeign = null;
-		Map<String, Object> conditions = null;
-		Object entityValue = null;
-		Map<String, Object> fieldValueMap = new HashMap<>();
-		boolean nonNullFound = false;
+		
+		FieldDetails ownerFieldDetails = null;
 		
 		//validate foreign constraint violation is not happening
-		CONSTRAINT_LOOP: for(ForeignConstraintDetails foreignConstraint: entityDetails.getForeignConstraints())
+		for(ForeignConstraintDetails foreignConstraint: entityDetails.getForeignConstraints())
 		{
-			if(!foreignConstraint.isValidate())
+			//if current entity does not own this relation
+			if(foreignConstraint.isMappedRelation())
 			{
 				continue;
-			}
-			
-			if(foreignConstraint.hasConditions())
-			{
-				conditions = foreignConstraint.getChildColumnConditions();
-				
-				for(String column: conditions.keySet())
-				{
-					fieldDetails = entityDetails.getFieldDetailsByColumn(column);
-					value = conditions.get(column);
-					entityValue = fieldDetails.getValue(entity);
-					
-					if(!value.equals(entityValue))
-					{
-						logger.trace("For {} skipping foreign constraint validation '{}' as column '{}' condition value '{}' is not matching with actual value '{}'", 
-								entityDetails.getEntityType().getName(), foreignConstraint.getName(), column, value, entityValue);
-						
-						continue CONSTRAINT_LOOP;
-					}
-				}
 			}
 			
 			//create existence query that needs to be executed against parent table
-			existenceQuery = new ExistenceQuery(foreignConstraint.getForeignEntity());
-			
-			fieldValueMap.clear();
-			nonNullFound = false;
-			
-			foreignEntityDetails = foreignConstraint.getForeignEntity();
-			fieldToForeign = foreignConstraint.getFields();
-			
-			for(String field: fieldToForeign.keySet())
-			{
-				fieldDetails = entityDetails.getFieldDetailsByField(field);
-				
-				value = fieldDetails.getValue(entity);
-				value = conversionService.convertToDBType(value, fieldDetails);
-				
-				foreignFieldDetails = foreignEntityDetails.getFieldDetailsByField(fieldToForeign.get(field));
-				
-				existenceQuery.addCondition(new ConditionParam(foreignFieldDetails.getColumn(), value, -1));
-				fieldValueMap.put(field, value);
-				
-				if(value != null)
-				{
-					nonNullFound = true;
-				}
-			}
-			
-			//if all values are null computing foreign relationship, ignore this relation
-			if(!nonNullFound)
+			existenceQuery = new CountQuery(foreignConstraint.getTargetEntityDetails());
+
+			foreignEntityDetails = foreignConstraint.getTargetEntityDetails();
+			ownerFieldDetails = foreignEntityDetails.getFieldDetailsByField(foreignConstraint.getOwnerField().getName());
+
+			value = ownerFieldDetails.getValue(entity);
+			value = conversionService.convertToDBType(value, ownerFieldDetails);
+
+			//if no value is defined for relationship
+			if(value == null)
 			{
 				continue;
 			}
 			
-			if(foreignConstraint.hasParentConditions())
-			{
-				conditions = foreignConstraint.getParentColumnConditions();
-				
-				for(String column: conditions.keySet())
-				{
-					value = conditions.get(column);
-					value = conversionService.convertToDBType(value, null);
-					
-					existenceQuery.addCondition(new ConditionParam(column, value, -1));
-				}
-			}
+			existenceQuery.addCondition(new ConditionParam(foreignEntityDetails.getIdField().getColumn(), value, -1));
 			
-			if(dataStore.checkForExistenence(existenceQuery, foreignEntityDetails) <= 0)
+			if(dataStore.getCount(existenceQuery, foreignEntityDetails) <= 0)
 			{
-				message = formatMessage(foreignConstraint.getMessage(), fieldValueMap);
-				message = (message != null) ? message : "Foreign constraint violated: " + foreignConstraint.getName();
+				message = "Foreign constraint violated: " + foreignConstraint.getConstraintName();
 				
 				logger.error(message);
-				throw new ForeignConstraintViolationException(foreignConstraint.getName(), message);
+				throw new ForeignConstraintViolationException(foreignConstraint.getConstraintName(), message);
 			}
 		}
 	}

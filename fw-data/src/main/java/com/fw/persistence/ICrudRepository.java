@@ -1,6 +1,6 @@
 package com.fw.persistence;
 
-import java.util.Date;
+import com.fw.persistence.repository.annotations.CountFunction;
 
 public interface ICrudRepository<E>
 {
@@ -9,9 +9,6 @@ public interface ICrudRepository<E>
 	public ITransaction newTransaction();
 	
 	public ITransaction currentTransaction();
-	
-	//audit related functions
-	public void clearAuditEntries(Date tillDate);
 	
 	/**
 	 * Saves the entity to underlying store
@@ -26,4 +23,11 @@ public interface ICrudRepository<E>
 	public boolean deleteById(Object key);
 	
 	public E findById(Object key);
+	
+	/**
+	 * Fetches the count of number of entities in this repository 
+	 * @return
+	 */
+	@CountFunction
+	public long getCount();
 }

@@ -12,7 +12,7 @@ public interface IEmployeeRepository extends ICrudRepository<Employee>
 	public Employee findByEmployeeNo(String empNo);
 	
 	@Field("id")
-	public String findIdByEmail(@Condition("emailId")String mail);
+	public long findIdByEmail(@Condition("emailId")String mail);
 
 	@Field("emailId")
 	public String findEmailByEmpno(@Condition("employeeNo")String empNo);

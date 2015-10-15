@@ -1,16 +1,17 @@
 package com.fw.test.persitence.entity;
 
-import com.fw.persistence.annotations.Column;
-import com.fw.persistence.annotations.DataType;
-import com.fw.persistence.annotations.IdField;
+import javax.persistence.Column;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.Table;
+
 import com.fw.persistence.annotations.Index;
 import com.fw.persistence.annotations.Indexed;
 import com.fw.persistence.annotations.Indexes;
-import com.fw.persistence.annotations.ReadOnly;
-import com.fw.persistence.annotations.Table;
 import com.fw.persistence.annotations.UniqueConstraint;
 
-@Table("EMPLOYEE")
+@Table(name = "EMPLOYEE")
 @Indexes({
 	@Index(fields={"phoneNo", "name"})
 })
@@ -18,11 +19,10 @@ public class Employee
 {
 	public static final String ERROR_MESSAGE_DUPLICATE_EMAIL = "Specified email-id already exists: ${emailId}";
 	
-	@Column(type = DataType.LONG)
-	@IdField
-	private String id;
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private long id;
 
-	@ReadOnly
 	@UniqueConstraint(name="EmpNo")
 	@Column(name = "EMP_NO")
 	private String employeeNo;
@@ -47,12 +47,12 @@ public class Employee
 		this.phoneNo = phoneNo;
 	}
 
-	public String getId()
+	public long getId()
 	{
 		return id;
 	}
 
-	public void setId(String id)
+	public void setId(long id)
 	{
 		this.id = id;
 	}

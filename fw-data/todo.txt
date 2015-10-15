@@ -72,6 +72,7 @@ Support for proper foreign keys
 	Ability to support intermediate table (without need of entity)
 Support to fetch beans - for search queries
 	Return bean property mapping - LOV queries
-	
+
+Support entity based fetch	
 Fix conversion service to use BeanUtils or apache commons
 

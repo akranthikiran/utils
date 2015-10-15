@@ -5,11 +5,11 @@ import java.util.List;
 
 import com.fw.persistence.EntityDetails;
 
-public class ExistenceQuery extends Query implements IConditionalQuery
+public class CountQuery extends Query implements IConditionalQuery
 {
 	private List<ConditionParam> conditions = new ArrayList<>();
 
-	public ExistenceQuery(EntityDetails entityDetails)
+	public CountQuery(EntityDetails entityDetails)
 	{
 		super(entityDetails);
 	}

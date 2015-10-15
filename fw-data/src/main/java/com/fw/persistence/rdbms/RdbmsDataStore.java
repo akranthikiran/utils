@@ -36,11 +36,11 @@ import com.fw.persistence.conversion.ConversionService;
 import com.fw.persistence.query.ChildrenExistenceQuery;
 import com.fw.persistence.query.ColumnParam;
 import com.fw.persistence.query.ConditionParam;
+import com.fw.persistence.query.CountQuery;
 import com.fw.persistence.query.CreateIndexQuery;
 import com.fw.persistence.query.CreateTableQuery;
-import com.fw.persistence.query.DeleteChildrenQuery;
 import com.fw.persistence.query.DeleteQuery;
-import com.fw.persistence.query.ExistenceQuery;
+import com.fw.persistence.query.DropTableQuery;
 import com.fw.persistence.query.FetchChildrenIdsQuery;
 import com.fw.persistence.query.FinderQuery;
 import com.fw.persistence.query.SaveOrUpdateQuery;
@@ -268,11 +268,11 @@ public class RdbmsDataStore implements IDataStore
 	}
 
 	@Override
-	public int checkForExistenence(ExistenceQuery existenceQuery, EntityDetails entityDetails)
+	public long getCount(CountQuery countQuery, EntityDetails entityDetails)
 	{
-		logger.trace("Started method: checkForExistenence");
+		logger.trace("Started method: getCount");
 		
-		List<ConditionParam> conditions = existenceQuery.getConditions();
+		List<ConditionParam> conditions = countQuery.getConditions();
 		
 		/*
 		if(conditions == null || conditions.isEmpty())
@@ -281,14 +281,14 @@ public class RdbmsDataStore implements IDataStore
 		}
 		*/
 		
-		logger.debug("Checking for existence of records from table '{}' using query: {}", existenceQuery.getTableName(), existenceQuery);
+		logger.debug("Fetching count of records from table '{}' using query: {}", countQuery.getTableName(), countQuery);
 		
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
 		
 		try(TransactionWrapper<RdbmsTransaction> transaction = transactionManager.newOrExistingTransaction())
 		{
-			String query = templates.buildQuery(RdbmsConfiguration.EXISTENCE_QUERY, "query", existenceQuery);
+			String query = templates.buildQuery(RdbmsConfiguration.COUNT_QUERY, "query", countQuery);
 			
 			logger.debug("Built existence query as: \n\t{}", query);
 			
@@ -320,78 +320,16 @@ public class RdbmsDataStore implements IDataStore
 			
 			int count = rs.getInt(1);
 			
-			logger.debug("Existence of {} records found from table: {}", count, existenceQuery.getTableName());
+			logger.debug("Existence of {} records found from table: {}", count, countQuery.getTableName());
 			
 			transaction.commit();
 			return count;
 		}catch(Exception ex)
 		{
 			logger.error("An error occurred while checking rows existence from table '" 
-					+ existenceQuery.getTableName() + "' using query: " + existenceQuery, ex);
+					+ countQuery.getTableName() + "' using query: " + countQuery, ex);
 			throw new PersistenceException("An error occurred while checking rows existence from table '" 
-						+ existenceQuery.getTableName() + "' using query: " + existenceQuery, ex);
-		}finally
-		{
-			closeResources(rs, pstmt);
-		}
-	}
-	
-	@Override
-	public int deleteChildren(DeleteChildrenQuery deleteChildrenQuery)
-	{
-		logger.trace("Started method: deleteChildren");
-		logger.debug("Deleting children records from table '{}' using query: {}", deleteChildrenQuery.getChildTableName(), deleteChildrenQuery);
-		
-		PreparedStatement pstmt = null;
-		ResultSet rs = null;
-		
-		try(TransactionWrapper<RdbmsTransaction> transaction = transactionManager.newOrExistingTransaction())
-		{
-			String query = templates.buildQuery(RdbmsConfiguration.DELETE_CHILDREN_QUERY, "query", deleteChildrenQuery);
-			
-			logger.debug("Built children-delete query as: \n\t{}", query);
-			
-			Connection connection = transaction.getTransaction().getConnection();
-			pstmt = connection.prepareStatement(query);
-			int index = 1;
-			List<Object> params = new ArrayList<>();
-			
-			if(deleteChildrenQuery.getParentConditions() != null)
-			{
-				for(ConditionParam condition: deleteChildrenQuery.getParentConditions())
-				{
-					pstmt.setObject(index, condition.getValue());
-					params.add(condition.getValue());
-					
-					index++;
-				}
-			}
-
-			if(deleteChildrenQuery.getChildConditions() != null)
-			{
-				for(ConditionParam condition: deleteChildrenQuery.getChildConditions())
-				{
-					pstmt.setObject(index, condition.getValue());
-					params.add(condition.getValue());
-					
-					index++;
-				}
-			}
-
-			logger.debug("Executing using params: " + params);
-			
-			int res = pstmt.executeUpdate();
-			
-			logger.debug("Deleted {} child record(s)", res);
-			
-			transaction.commit();
-			return res;
-		}catch(Exception ex)
-		{
-			logger.error("An error occurred while deleting children from table '" 
-					+ deleteChildrenQuery.getTableName() + "' using query: " + deleteChildrenQuery, ex);
-			throw new PersistenceException("An error occurred while deleting children from table '" 
-						+ deleteChildrenQuery.getTableName() + "' using query: " + deleteChildrenQuery, ex);
+						+ countQuery.getTableName() + "' using query: " + countQuery, ex);
 		}finally
 		{
 			closeResources(rs, pstmt);
@@ -1013,6 +951,48 @@ public class RdbmsDataStore implements IDataStore
 			closeResources(rs, pstmt);
 		}
 	}
-	
-	
+
+	/* (non-Javadoc)
+	 * @see com.fw.persistence.IDataStore#dropTable(com.fw.persistence.query.DropTableQuery)
+	 */
+	@Override
+	public void dropTable(DropTableQuery dropQuery)
+	{
+		logger.trace("Started method: dropTable");
+		logger.debug("Trying to drop table '{}' using query: {}", dropQuery.getTableName(), dropQuery);
+		
+		Statement stmt = null;
+		
+		try(TransactionWrapper<RdbmsTransaction> transaction = transactionManager.newOrExistingTransaction())
+		{
+			String query = templates.buildQuery(RdbmsConfiguration.DROP_QUERY, "query", dropQuery);
+			
+			logger.debug("Built drop query as: \n\t{}", query);
+			
+			Connection connection = transaction.getTransaction().getConnection();
+			stmt = connection.createStatement();
+			
+			stmt.execute(query);
+			connection.commit();
+		}catch(Exception ex)
+		{
+			logger.error("An error occurred while dropping table '" 
+					+ dropQuery.getTableName() + "' using query: " + dropQuery, ex);
+			
+			throw new PersistenceException("An error occurred while dropping table '" 
+						+ dropQuery.getTableName() + "' using query: " + dropQuery, ex);
+		}finally
+		{
+			closeResources(null, stmt);
+		}
+	}
+
+	/* (non-Javadoc)
+	 * @see com.fw.persistence.IDataStore#isExplicitChildDeleteRequired()
+	 */
+	@Override
+	public boolean isExplicitForeignCheckRequired()
+	{
+		return false;
+	}
 }

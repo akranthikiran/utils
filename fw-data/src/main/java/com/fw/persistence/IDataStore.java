@@ -5,11 +5,11 @@ import java.util.Set;
 
 import com.fw.persistence.conversion.ConversionService;
 import com.fw.persistence.query.ChildrenExistenceQuery;
+import com.fw.persistence.query.CountQuery;
 import com.fw.persistence.query.CreateIndexQuery;
 import com.fw.persistence.query.CreateTableQuery;
-import com.fw.persistence.query.DeleteChildrenQuery;
 import com.fw.persistence.query.DeleteQuery;
-import com.fw.persistence.query.ExistenceQuery;
+import com.fw.persistence.query.DropTableQuery;
 import com.fw.persistence.query.FetchChildrenIdsQuery;
 import com.fw.persistence.query.FinderQuery;
 import com.fw.persistence.query.SaveOrUpdateQuery;
@@ -30,7 +30,7 @@ public interface IDataStore
 	
 	public void createIndex(CreateIndexQuery query);
 	
-	public int checkForExistenence(ExistenceQuery existenceQuery, EntityDetails entityDetails);
+	public long getCount(CountQuery existenceQuery, EntityDetails entityDetails);
 	
 	public int save(SaveQuery saveQuery, EntityDetails entityDetails);
 
@@ -40,13 +40,30 @@ public interface IDataStore
 	
 	public int delete(DeleteQuery deleteQuery, EntityDetails entityDetails);
 	
-	public int deleteChildren(DeleteChildrenQuery deleteChildrenQuery);
-	
 	public int checkChildrenExistence(ChildrenExistenceQuery childrenExistenceQuery);
 	
 	public List<Object> fetchChildrenIds(FetchChildrenIdsQuery fetchChildrenIdsQuery);
 
 	public List<Record> executeFinder(FinderQuery findQuery, EntityDetails entityDetails);
+	
+	/**
+	 * Drops the underlying entity table
+	 * @param query
+	 */
+	public void dropTable(DropTableQuery query);
+	
+	/**
+	 * Indicates whether check for foreign key relation should be done explicitly. Needed by NOSQL DB, if integrity needs
+	 * to be maintained.
+	 * This is used 
+	 * 		During delete, to check/delete child entities with parent entity
+	 * 		During insert/update, to check if parent entity exists or not
+	 * 
+	 * DataStore which needs this explicit support, should have setter to accept whether this explicit check is required by
+	 * the application. By this developer can choose whether it should be enabled or not.
+	 * @return
+	 */
+	public boolean isExplicitForeignCheckRequired();
 }
 
 

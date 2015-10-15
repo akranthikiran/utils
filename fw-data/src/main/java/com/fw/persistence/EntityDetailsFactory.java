@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
 import javax.persistence.Column;
 import javax.persistence.GeneratedValue;
@@ -22,25 +23,21 @@ import com.fw.persistence.annotations.AutoFetchType;
 import com.fw.persistence.annotations.DataType;
 import com.fw.persistence.annotations.DataTypeMapping;
 import com.fw.persistence.annotations.FieldAccess;
-import com.fw.persistence.annotations.ForeignConstraint;
-import com.fw.persistence.annotations.ForeignConstraints;
 import com.fw.persistence.annotations.Index;
 import com.fw.persistence.annotations.Indexed;
 import com.fw.persistence.annotations.Indexes;
-import com.fw.persistence.annotations.Mapping;
-import com.fw.persistence.annotations.MappingCondition;
 import com.fw.persistence.annotations.UniqueConstraint;
 import com.fw.persistence.annotations.UniqueConstraints;
-import com.fw.persistence.conversion.ConversionService;
 import com.fw.persistence.query.CreateIndexQuery;
 import com.fw.persistence.query.CreateTableQuery;
 
 public class EntityDetailsFactory
 {
 	private static Logger logger = LogManager.getLogger(EntityDetailsFactory.class);
-
-	private static Map<Class<?>, EntityDetails> typeToDetails = new HashMap<>();
 	private static final String SPECIAL_CHAR_PATTERN = "[\\W\\_]+";
+	
+	private Map<Class<?>, EntityDetails> typeToDetails = new HashMap<>();
+	
 	
 	/**
 	 * Removes non aplha numeric characters (including underscore) from column names and sets it as key and the actual column
@@ -50,7 +47,7 @@ public class EntityDetailsFactory
 	 * @param dataStore
 	 * @return
 	 */
-	private static Map<String, String> flattenColumnNames(String tableName, IDataStore dataStore)
+	private Map<String, String> flattenColumnNames(String tableName, IDataStore dataStore)
 	{
 		Set<String> columns = dataStore.getColumnNames(tableName);
 		String flattenName = null;
@@ -71,7 +68,7 @@ public class EntityDetailsFactory
 		return map;
 	}
 	
-	private static void checkFieldValidity(EntityDetails entityDetails, String fields[], String constraintType, String name, String parentClass)
+	private void checkFieldValidity(EntityDetails entityDetails, String fields[], String constraintType, String name, String parentClass)
 	{
 		for(String fieldName: fields)
 		{
@@ -82,7 +79,7 @@ public class EntityDetailsFactory
 		}
 	}
 	
-	private static void buildUniqueConstraint(UniqueConstraint uniqueConstraint, EntityDetails entityDetails, Field field)
+	private void buildUniqueConstraint(UniqueConstraint uniqueConstraint, EntityDetails entityDetails, Field field)
 	{
 		if(field == null && uniqueConstraint.fields().length == 0)
 		{
@@ -105,91 +102,41 @@ public class EntityDetailsFactory
 		
 		logger.trace("Added unique-constraint {} to entity: {}", uniqueConstraint, entityDetails);
 	}
-	
-	private static void buildForeignConstraint(ForeignConstraint foreignConstraint, EntityDetails entityDetails, 
-					IDataStore dataStore, boolean createTables)
-	{
-		ConversionService conversionService = dataStore.getConversionService();
-		String name = foreignConstraint.name();
-		
-		//fetch foreign fields and validate them
-		EntityDetails foreignEntityDetails = null;
-		
-		try
-		{
-			foreignEntityDetails = getEntityDetails(foreignConstraint.foreignEntity(), dataStore, createTables);
-		}catch(Exception ex)
-		{
-			throw new InvalidMappingException("An error occurred while fetching foreign entity '" 
-					+ foreignConstraint.foreignEntity().getName() + "' details for  @ForeignConstraint '" + foreignConstraint.name() + "'", ex);
-		}
 
-		//fetch mappings and validate them
-		Mapping mappings[] = foreignConstraint.mappings();
-		Map<String, String> fieldMap = new HashMap<>();
+	/**
+	 * Fetches foreign constraint from the specified field, if one is present. If present, the same is added to current entity-details
+	 * target-entity details and to the field details.
+	 * @param entityDetails
+	 * @param fieldDetails
+	 * @param dataStore
+	 * @param createTables
+	 */
+	private void buildForeignConstraint(EntityDetails entityDetails, FieldDetails fieldDetails, final IDataStore dataStore, final boolean createTables)
+	{
+		Field field = fieldDetails.getField();
 		
-		for(Mapping mapping: mappings)
+		//fetch foreign key constraint details if present
+		ForeignConstraintDetails foreignConstraintDetails = ForeignConstraintDetails.fetchForeignConstraint(entityDetails, field, new Function<Class<?>, EntityDetails>()
 		{
-			if(!entityDetails.hasField(mapping.from()))
+			@Override
+			public EntityDetails apply(Class<?> entityType)
 			{
-				throw new InvalidMappingException("Invalid field '" + mapping.from() + "' specified in @ForeignConstraint '" + name 
-						+ "' in class - " + entityDetails.getEntityType().getName());
+				return getEntityDetails(entityType, dataStore, createTables);
 			}
-			
-			if(!foreignEntityDetails.hasField(mapping.to()))
-			{
-				throw new InvalidMappingException("Invalid parent field '" + mapping.to() + "' specified in @ForeignConstraint '" + name 
-						+ "' in class - " + entityDetails.getEntityType().getName());
-			}
-			
-			fieldMap.put(mapping.from(), mapping.to());
+		});
+		
+		if(foreignConstraintDetails == null)
+		{
+			return;
 		}
 		
-		//fetch conditions
-		MappingCondition conditions[] = foreignConstraint.conditions();
-		Map<String, Object> conditionMap = new HashMap<>();
-		FieldDetails fieldDetails = null;
+		entityDetails.addForeignConstraintDetails(foreignConstraintDetails);
+		foreignConstraintDetails.getTargetEntityDetails().addChildConstraint(foreignConstraintDetails);
 		
-		for(MappingCondition condition: conditions)
-		{
-			fieldDetails = entityDetails.getFieldDetailsByField(condition.field());
-			
-			if(fieldDetails == null)
-			{
-				throw new InvalidMappingException("Invalid field '" + condition.field() + "' specified for condition in @ForeignConstraint '" + name 
-						+ "' in class - " + entityDetails.getEntityType().getName());
-			}
-			
-			conditionMap.put(fieldDetails.getName(), conversionService.convertToDBType(condition.value(), fieldDetails));
-		}
-		
-		//fetch parent conditions
-		conditions = foreignConstraint.parentConditions();
-		Map<String, Object> parentConditionMap = new HashMap<>();
-		
-		for(MappingCondition condition: conditions)
-		{
-			fieldDetails = foreignEntityDetails.getFieldDetailsByField(condition.field());
-			
-			if(fieldDetails == null)
-			{
-				throw new InvalidMappingException("Invalid field '" + condition.field() + "' specified for parent-condition in @ForeignConstraint '" + name 
-						+ "' in class - " + entityDetails.getEntityType().getName());
-			}
-			
-			parentConditionMap.put(fieldDetails.getName(), conversionService.convertToDBType(condition.value(), fieldDetails));
-		}
-		
-		ForeignConstraintDetails newConstraint = new ForeignConstraintDetails(foreignConstraint.name(), fieldMap, conditionMap, parentConditionMap,
-					foreignEntityDetails, entityDetails, foreignConstraint.message(), foreignConstraint.validate(), foreignConstraint.deleteCascade());
-		
-		entityDetails.addForeignConstraintDetails(newConstraint);
-		foreignEntityDetails.addChildConstraint(newConstraint);
-		
-		logger.trace("Added foreign-constraint {} to entity: {}", newConstraint, entityDetails);
+		logger.trace("Added foreign-constraint {} to entity: {}", foreignConstraintDetails, entityDetails);
 	}
 	
-	private static void buildIndexDetails(EntityDetails entityDetails, String name, String... fields)
+	private void buildIndexDetails(EntityDetails entityDetails, String name, String... fields)
 	{
 		if(fields == null || fields.length == 0)
 		{
@@ -216,7 +163,7 @@ public class EntityDetailsFactory
 		entityDetails.addIndexDetails(new IndexDetails(name, fields));
 	}
 	
-	public static synchronized EntityDetails getEntityDetails(Class<?> entityType, IDataStore dataStore, boolean createTables)
+	public synchronized EntityDetails getEntityDetails(Class<?> entityType, IDataStore dataStore, boolean createTables)
 	{
 		EntityDetails entityDetails = typeToDetails.get(entityType);
 		
@@ -273,7 +220,7 @@ public class EntityDetailsFactory
 		typeToDetails.put(entityType, entityDetails);
 		
 		UniqueConstraints uniqueConstraints = null;
-		ForeignConstraints foreignConstraints = null;
+		//ForeignConstraints foreignConstraints = null;
 		Indexes indexes = null;
 		cls = entityType;
 		
@@ -296,6 +243,7 @@ public class EntityDetailsFactory
 				}
 			}
 			
+			/*
 			foreignConstraints = cls.getAnnotation(ForeignConstraints.class);
 			
 			if(foreignConstraints != null)
@@ -305,6 +253,7 @@ public class EntityDetailsFactory
 					buildForeignConstraint(constraint, entityDetails, dataStore, createTables);	
 				}
 			}
+			*/
 			
 			indexes = cls.getAnnotation(Indexes.class);
 			
@@ -320,7 +269,8 @@ public class EntityDetailsFactory
 		}
 		
 		//fetch constraints at field level
-		fetchFieldConstraints(entityDetails, dataStore);
+			//Note: this is done at end to ensure all field details are loaded first. Which is required during cross recursion
+		fetchFieldConstraints(entityDetails, dataStore, createTables);
 		
 		if(flattenColumnMap == null)
 		{
@@ -339,7 +289,7 @@ public class EntityDetailsFactory
 		return entityDetails;
 	}
 	
-	private static void fetchFieldMappings(Class<?> cls, EntityDetails entityDetails, AccessType accessType, Map<String, String> flattenColumnMap)
+	private void fetchFieldMappings(Class<?> cls, EntityDetails entityDetails, AccessType accessType, Map<String, String> flattenColumnMap)
 	{
 		Field fields[] = cls.getDeclaredFields();
 		Column column = null;
@@ -425,7 +375,7 @@ public class EntityDetailsFactory
 		}
 	}
 	
-	private static FieldDetails buildFieldDetails(Field field, String columnName, DataType dataType, EntityDetails entityDetails)
+	private FieldDetails buildFieldDetails(Field field, String columnName, DataType dataType, EntityDetails entityDetails)
 	{
 		FieldDetails fieldDetails = null;
 		Id idField = field.getAnnotation(Id.class);
@@ -467,7 +417,13 @@ public class EntityDetailsFactory
 		return fieldDetails;
 	}
 
-	private static void fetchFieldConstraints(EntityDetails entityDetails, IDataStore dataStore)
+	/**
+	 * Fetches constraints defined at fied level like - Unique constraint, foreign key constraint etc
+	 * @param entityDetails
+	 * @param dataStore
+	 * @param createTables
+	 */
+	private void fetchFieldConstraints(EntityDetails entityDetails, IDataStore dataStore, boolean createTables)
 	{
 		Field field = null;
 		UniqueConstraint uniqueConstraint = null;
@@ -482,6 +438,9 @@ public class EntityDetailsFactory
 			{
 				buildUniqueConstraint(uniqueConstraint, entityDetails, field);
 			}
+			
+			//fetch foreign constraint details, if any
+			buildForeignConstraint(entityDetails, fieldDetails, dataStore, createTables);
 		}
 	}
 	
@@ -490,7 +449,7 @@ public class EntityDetailsFactory
 	 * @param entityDetails
 	 * @param dataStore
 	 */
-	private static void createRequiredTable(EntityDetails entityDetails, IDataStore dataStore)
+	private void createRequiredTable(EntityDetails entityDetails, IDataStore dataStore)
 	{
 		FieldDetails idFieldDetails = entityDetails.getIdField();
 		
@@ -527,4 +486,15 @@ public class EntityDetailsFactory
 			dataStore.createIndex(new CreateIndexQuery(entityDetails, index.getName(), columns));
 		}
 	}
+	
+	/**
+	 * Removed specified entity details from local cache. This is mainly required while the
+	 * corresponding entity table is dropped
+	 * @param entityType
+	 */
+	public void removeEntityDetails(Class<?> entityType)
+	{
+		typeToDetails.remove(entityType);
+	}
+	
 }

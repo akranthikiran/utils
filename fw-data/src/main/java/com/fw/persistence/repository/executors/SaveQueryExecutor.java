@@ -84,9 +84,6 @@ public class SaveQueryExecutor extends AbstractPersistQueryExecutor
 					query.addColumn(new ColumnParam(field.getColumn(), null, -1, field.getSequenceName()));
 					continue;
 				}
-				
-				query.addColumn(new ColumnParam(field.getColumn(), field.getValue(entity), -1, null));
-				continue;
 			}
 			
 			value = conversionService.convertToDBType(field.getValue(entity), field);

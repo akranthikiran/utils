@@ -25,23 +25,19 @@ public class RdbmsConfiguration implements Validateable
 	public static final String SAVE_UPDATE_QUERY = "saveUpdateTemplate";
 	public static final String DELETE_QUERY = "deleteTemplate";
 	public static final String FINDER_QUERY = "finderTemplate";
-	public static final String EXISTENCE_QUERY = "existenceTemplate";
-	public static final String DELETE_CHILDREN_QUERY = "deleteChildren";
+	public static final String COUNT_QUERY = "countTemplate";
 	public static final String CHILDREN_EXISTENCE_QUERY = "childrenExistenceTemplate";
 	public static final String FETCH_CHILDREN_IDS_QUERY = "fetchChildrenIdsTemplate";
-	
-	public static final String AUDIT_ENTRY_QUERY = "auditEntryTemplate";
-	public static final String AUDIT_CLEAR_QUERY = "clearAuditTemplate";
-	public static final String AUDIT_FETCH_QUERY = "fetchAuditEntriesTemplate";
-	
+	public static final String DROP_QUERY = "dropTableTemplate";
+
 	public static final String MANDATORY_QUERIES[] = {
 		CREATE_QUERY, CREATE_INDEX,
 		
-		SAVE_QUERY, UPDATE_QUERY, DELETE_QUERY, FINDER_QUERY, EXISTENCE_QUERY, 
+		SAVE_QUERY, UPDATE_QUERY, DELETE_QUERY, FINDER_QUERY, COUNT_QUERY, 
 		
 		CHILDREN_EXISTENCE_QUERY, FETCH_CHILDREN_IDS_QUERY,
 		
-		AUDIT_ENTRY_QUERY, AUDIT_CLEAR_QUERY, AUDIT_FETCH_QUERY
+		DROP_QUERY
 	};
 
 	private Map<String, String> queryMap = new HashMap<>();

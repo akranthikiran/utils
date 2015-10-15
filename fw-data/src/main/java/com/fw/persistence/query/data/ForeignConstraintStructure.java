@@ -1,15 +1,13 @@
 package com.fw.persistence.query.data;
 
+import java.lang.reflect.Field;
 import java.util.Map;
 
 import com.fw.persistence.EntityDetails;
-import com.fw.persistence.FieldDetails;
 import com.fw.persistence.ForeignConstraintDetails;
 
 public class ForeignConstraintStructure
 {
-	public static final String FOREIGN_CONSTRAINT_PREFIX = "FK_";
-	
 	private String name;
 	private String columns[];
 	private String parentTable;
@@ -17,28 +15,14 @@ public class ForeignConstraintStructure
 	
 	public ForeignConstraintStructure(EntityDetails entityDetails, ForeignConstraintDetails constraint, Map<String, String> fieldMapping)
 	{
-		this.name = FOREIGN_CONSTRAINT_PREFIX + entityDetails.getEntityType().getSimpleName().toUpperCase() + "_" + constraint.getName().toUpperCase();
-		this.parentTable = constraint.getForeignEntity().getTableName();
+		Field ownerField = constraint.getOwnerField();
+		EntityDetails targetEntity = constraint.getTargetEntityDetails();
 		
-		Map<String, String> fieldMap = constraint.getFields();
-		FieldDetails fieldDetails = null, parentFieldDetails = null;
-		EntityDetails parentEntityDetails = constraint.getForeignEntity();
+		this.name = constraint.getConstraintName();
+		this.parentTable = targetEntity.getTableName();
 		
-		this.columns = new String[fieldMap.size()];
-		this.parentColumns = new String[fieldMap.size()];
-		
-		int idx = 0;
-		
-		for(String field: fieldMap.keySet())
-		{
-			fieldDetails = entityDetails.getFieldDetailsByField(field);
-			parentFieldDetails = parentEntityDetails.getFieldDetailsByField(fieldMap.get(field));
-			
-			this.columns[idx] = fieldMapping.get(fieldDetails.getColumn());
-			
-			//parent field details would already have got mapped, so we dont need external mapping
-			this.parentColumns[idx] = parentFieldDetails.getColumn();
-		}
+		this.columns = new String[] { entityDetails.getFieldDetailsByField(ownerField.getName()).getColumn() };
+		this.parentColumns = new String[] { targetEntity.getIdField().getColumn() };
 	}
 
 	public String getName()

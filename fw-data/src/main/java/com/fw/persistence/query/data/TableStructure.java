@@ -17,6 +17,9 @@ public class TableStructure
 	private List<UniqueConstraintStructure> uniqueConstraints = new ArrayList<>();
 	private List<ForeignConstraintStructure> foreignConstraints = new ArrayList<>();
 	
+	/**
+	 * Field name to column name mapping
+	 */
 	private Map<String, String> fieldMapping = new HashMap<>();
 	
 	public TableStructure(EntityDetails entityDetails)
@@ -57,8 +60,11 @@ public class TableStructure
 		//Load foreign constraints of the table
 		for(ForeignConstraintDetails constraint: entityDetails.getForeignConstraints())
 		{
-			if(constraint.hasAnyConditions())
+			//if this is mapping constraint and actual relation is
+			//		maintained by target entity
+			if(constraint.isMappedRelation())
 			{
+				//don't add this constraint as part of table structure
 				continue;
 			}
 			

@@ -12,6 +12,7 @@ import com.fw.persistence.EntityDetails;
 import com.fw.persistence.EntityDetailsFactory;
 import com.fw.persistence.ICrudRepository;
 import com.fw.persistence.IDataStore;
+import com.fw.persistence.IInternalRepository;
 import com.fw.persistence.InvalidMappingException;
 
 public class RepositoryFactory
@@ -24,6 +25,8 @@ public class RepositoryFactory
 	private boolean createTables;
 	
 	private ExecutorFactory executorFactory;
+	
+	private EntityDetailsFactory entityDetailsFactory = new EntityDetailsFactory();
 	
 	public IDataStore getDataStore()
 	{
@@ -101,7 +104,7 @@ public class RepositoryFactory
 			throw new InvalidMappingException("No @Table annotation found on entity type: " + entityType.getName());
 		}
 		
-		return EntityDetailsFactory.getEntityDetails((Class)entityType, dataStore, createTables);
+		return entityDetailsFactory.getEntityDetails((Class)entityType, dataStore, createTables);
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -117,7 +120,7 @@ public class RepositoryFactory
 		EntityDetails entityDetails = fetchEntityDetails(repositoryType);
 		RepositoryProxy proxyImpl = new RepositoryProxy(dataStore, repositoryType, entityDetails, getExecutorFactory());
 		
-		repo = (R)Proxy.newProxyInstance(RepositoryFactory.class.getClassLoader(), new Class<?>[] {repositoryType}, proxyImpl);
+		repo = (R)Proxy.newProxyInstance(RepositoryFactory.class.getClassLoader(), new Class<?>[] {repositoryType, IInternalRepository.class}, proxyImpl);
 		typeToRepo.put(repositoryType, repo);
 		entityTypeToRepo.put(entityDetails.getEntityType(), repo);
 		
@@ -134,10 +137,11 @@ public class RepositoryFactory
 			return repo;
 		}
 
-		EntityDetails entityDetails = EntityDetailsFactory.getEntityDetails((Class)entityType, dataStore, createTables);
+		EntityDetails entityDetails = entityDetailsFactory.getEntityDetails((Class)entityType, dataStore, createTables);
 		RepositoryProxy proxyImpl = new RepositoryProxy(dataStore, (Class)ICrudRepository.class, entityDetails, getExecutorFactory());
 		
-		repo = (ICrudRepository)Proxy.newProxyInstance(RepositoryFactory.class.getClassLoader(), new Class<?>[] {ICrudRepository.class}, proxyImpl);
+		repo = (ICrudRepository)Proxy.newProxyInstance(RepositoryFactory.class.getClassLoader(), 
+							new Class<?>[] {ICrudRepository.class, IInternalRepository.class}, proxyImpl);
 		entityTypeToRepo.put(entityType, repo);
 		
 		return repo;
@@ -154,5 +158,32 @@ public class RepositoryFactory
 		}
 		
 		return (ICrudRepository)getGenericRepository(entityType);
+	}
+	
+	/**
+	 * Drops the specified entity type table and cleans up local caches
+	 * @param entityType
+	 */
+	public <T> void dropRepository(Class<T> entityType)
+	{
+		IInternalRepository repository = (IInternalRepository)getRepositoryForEntity(entityType);
+
+		//drop the underlying data store table
+		repository.dropEntityTable();
+		
+		//remove from entity details factory, so that required tables will get auto created
+		entityDetailsFactory.removeEntityDetails(entityType);
+	
+		//remove from local entity type cache
+		this.entityTypeToRepo.remove(entityType);
+		
+		//remove from local repository type cache
+		Class<?> actualRepoType = repository.getRepositoryType();
+		
+		//if target repository type is not generic type
+		if(!ICrudRepository.class.equals(actualRepoType))
+		{
+			this.typeToRepo.remove(actualRepoType);
+		}
 	}
 }

@@ -203,6 +203,12 @@ public class EntityDetails
 	 */
 	public void addChildConstraint(ForeignConstraintDetails childConstraint)
 	{
+		//if specified constraint is owned by current entity, ignore child end relation
+		if(childConstraint.isMappedRelation())
+		{
+			return;
+		}
+		
 		if(childConstraints == null)
 		{
 			childConstraints = new ArrayList<ForeignConstraintDetails>();
