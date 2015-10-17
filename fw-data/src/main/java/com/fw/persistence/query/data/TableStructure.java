@@ -45,6 +45,12 @@ public class TableStructure
 				continue;
 			}
 			
+			//if the field is relation field, but not maintained within the curent table
+			if(field.isMappedRelationField() || field.isTableJoined())
+			{
+				continue;
+			}
+			
 			column = new ColumnStructure(entityType, field);
 			
 			columns.add(column);
@@ -62,7 +68,7 @@ public class TableStructure
 		{
 			//if this is mapping constraint and actual relation is
 			//		maintained by target entity
-			if(constraint.isMappedRelation())
+			if(constraint.isMappedRelation() || constraint.getJoinTableDetails() != null)
 			{
 				//don't add this constraint as part of table structure
 				continue;

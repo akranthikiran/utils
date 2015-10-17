@@ -1,5 +1,9 @@
 package com.fw.persistence;
 
+import java.lang.reflect.Field;
+
+import com.fw.persistence.annotations.DataType;
+
 /**
  * Represents join table (intermediate table) that is needed for many-to-many
  * relation
@@ -17,6 +21,11 @@ public class JoinTableDetails
 	 * Join column name. Used to link with the owner entity table
 	 */
 	private String joinColumn;
+	
+	/**
+	 * Data type of join column
+	 */
+	private DataType joinColumnType;
 
 	/**
 	 * Inverse join column name. Used to link with non-owner entity table
@@ -24,14 +33,41 @@ public class JoinTableDetails
 	 */
 	private String inverseJoinColumn;
 	
+	/**
+	 * Data type of inverse join column
+	 */
+	private DataType inverseJoinColumnType;
+	
+	/**
+	 * Represents this join table as entity details
+	 */
+	private EntityDetails entityDetailsForm;
+	
+	/**
+	 * Entity details owning this join table
+	 */
+	private EntityDetails ownerEntityDetails;
+	
+	/**
+	 * Target Entity details by target 
+	 */
+	private EntityDetails targetEntityDetails;
+	
 	public JoinTableDetails()
 	{}
 	
-	public JoinTableDetails(String tableName, String joinColumn, String inverseJoinColumn)
+	public JoinTableDetails(String tableName, String joinColumn, DataType joinColumnType, String inverseJoinColumn, DataType inverseJoinColumnType,
+			EntityDetails ownerEntityDetails, EntityDetails targetEntityDetails)
 	{
 		this.tableName = tableName;
 		this.joinColumn = joinColumn;
 		this.inverseJoinColumn = inverseJoinColumn;
+		
+		this.joinColumnType = joinColumnType;
+		this.inverseJoinColumnType = inverseJoinColumnType;
+		
+		this.ownerEntityDetails = ownerEntityDetails;
+		this.targetEntityDetails = targetEntityDetails;
 	}
 
 	/**
@@ -83,6 +119,87 @@ public class JoinTableDetails
 	public void setInverseJoinColumn(String inverseJoinColumn)
 	{
 		this.inverseJoinColumn = inverseJoinColumn;
+	}
+	
+	/**
+	 * @return the {@link #joinColumnType joinColumnType}
+	 */
+	public DataType getJoinColumnType()
+	{
+		return joinColumnType;
+	}
+
+	/**
+	 * @param joinColumnType the {@link #joinColumnType joinColumnType} to set
+	 */
+	public void setJoinColumnType(DataType joinColumnType)
+	{
+		this.joinColumnType = joinColumnType;
+	}
+
+	/**
+	 * @return the {@link #inverseJoinColumnType inverseJoinColumnType}
+	 */
+	public DataType getInverseJoinColumnType()
+	{
+		return inverseJoinColumnType;
+	}
+
+	/**
+	 * @param inverseJoinColumnType the {@link #inverseJoinColumnType inverseJoinColumnType} to set
+	 */
+	public void setInverseJoinColumnType(DataType inverseJoinColumnType)
+	{
+		this.inverseJoinColumnType = inverseJoinColumnType;
+	}
+
+	/**
+	 * Converts this join table details to entity details
+	 * @return
+	 */
+	public EntityDetails toEntityDetails()
+	{
+		//if entity details was already created, reuse it
+		if(entityDetailsForm != null)
+		{
+			return entityDetailsForm;
+		}
+		
+		try
+		{
+			Class<?> entityType = JoinTableEntity.class;
+			
+			Field joinColumnField = entityType.getDeclaredField("joinColumn");
+			Field invJoinColField = entityType.getDeclaredField("inverseJoinColumn");
+			
+			//create entity details
+			EntityDetails entityDetails = new EntityDetails(tableName, entityType);
+			
+			FieldDetails joinFieldDetails = new FieldDetails(joinColumnField, joinColumn, joinColumnType);
+			joinFieldDetails.setOverriddenColumnName(joinColumn);
+			
+			FieldDetails invJoinFieldDetails = new FieldDetails(invJoinColField, inverseJoinColumn, inverseJoinColumnType);
+			invJoinFieldDetails.setOverriddenColumnName(inverseJoinColumn);
+			
+			entityDetails.addFieldDetails(joinFieldDetails);
+			entityDetails.addFieldDetails(invJoinFieldDetails);
+			
+			entityDetails.addUniqueKeyConstraint(new UniqueConstraintDetails("JOIN_INV_JOIN", 
+					new String[]{"joinColumn", "inverseJoinColumn"}, "Specified relation already exist", true));
+		
+			entityDetails.addForeignConstraintDetails(new ForeignConstraintDetails(ownerEntityDetails, joinColumnField, entityDetails));
+			entityDetails.addForeignConstraintDetails(new ForeignConstraintDetails(targetEntityDetails, invJoinColField, entityDetails));
+			
+			entityDetails.addIndexDetails(new IndexDetails(tableName.toUpperCase() + "_JOIN_COL", new String[]{"joinColumn"}));
+			entityDetails.addIndexDetails(new IndexDetails(tableName.toUpperCase() + "_INV_JOIN_COL", new String[]{"inverseJoinColumn"}));
+			
+			this.entityDetailsForm = entityDetails;
+			
+			return entityDetails;
+		}catch(Exception ex)
+		{
+			throw new IllegalStateException("An error occurred while converting JoinTableDetails to EntityDetails", ex);
+		}
 	}
 
 	/* (non-Javadoc)

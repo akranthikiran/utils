@@ -1,0 +1,79 @@
+package com.fw.test.persitence.entity;
+
+import javax.persistence.Column;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+
+@Table(name = "ORDER_ITEM")
+public class OrderItem
+{
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private long id;
+
+	@Column
+	private int quantity;
+	
+	@ManyToOne
+	@Column(name = "ORDER_ID")
+	private Order order;
+
+	public OrderItem(int quantity, Order order)
+	{
+		this.quantity = quantity;
+		this.order = order;
+	}
+
+	/**
+	 * @return the {@link #id id}
+	 */
+	public long getId()
+	{
+		return id;
+	}
+
+	/**
+	 * @param id the {@link #id id} to set
+	 */
+	public void setId(long id)
+	{
+		this.id = id;
+	}
+
+	/**
+	 * @return the {@link #quantity quantity}
+	 */
+	public int getQuantity()
+	{
+		return quantity;
+	}
+
+	/**
+	 * @param quantity the {@link #quantity quantity} to set
+	 */
+	public void setQuantity(int quantity)
+	{
+		this.quantity = quantity;
+	}
+
+	/**
+	 * @return the {@link #order order}
+	 */
+	public Order getOrder()
+	{
+		return order;
+	}
+
+	/**
+	 * @param order the {@link #order order} to set
+	 */
+	public void setOrder(Order order)
+	{
+		this.order = order;
+	}
+	
+	
+}

@@ -64,6 +64,8 @@ update/insert query methods should accept implicit values for fields
 	Similarly finders/updaters/deleters should be able to accept implicit conditions
 		This will be helpful in writing methods like deleteInactiveJobs()
 
+
+Cross dependency among entities using foreign keys should be handled
 ============================================================================
 ============================================================================
 
@@ -76,3 +78,5 @@ Support to fetch beans - for search queries
 Support entity based fetch	
 Fix conversion service to use BeanUtils or apache commons
 
+Entity Listeners
+	 need for extension fields, audit entries

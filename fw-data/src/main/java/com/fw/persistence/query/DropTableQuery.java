@@ -1,7 +1,6 @@
 package com.fw.persistence.query;
 
 import com.fw.persistence.EntityDetails;
-import com.fw.persistence.query.data.TableStructure;
 
 /**
  * Drop query to drop underlying entity table 
@@ -9,23 +8,18 @@ import com.fw.persistence.query.data.TableStructure;
  */
 public class DropTableQuery extends Query
 {
-	private TableStructure tableStructure;
+	private String tableName;
 	
 	public DropTableQuery(EntityDetails entityDetails)
 	{
 		super(entityDetails);
 		
-		this.tableStructure = new TableStructure(entityDetails);
-	}
-	
-	public TableStructure getTableStructure()
-	{
-		return tableStructure;
+		this.tableName = entityDetails.getTableName();
 	}
 	
 	public String getTableName()
 	{
-		return tableStructure.getTableName();
+		return tableName;
 	}
 
 	/* (non-Javadoc)

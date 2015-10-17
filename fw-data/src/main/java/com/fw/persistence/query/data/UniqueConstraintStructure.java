@@ -3,7 +3,6 @@ package com.fw.persistence.query.data;
 import java.util.Map;
 
 import com.fw.persistence.EntityDetails;
-import com.fw.persistence.FieldDetails;
 import com.fw.persistence.UniqueConstraintDetails;
 
 public class UniqueConstraintStructure
@@ -16,15 +15,15 @@ public class UniqueConstraintStructure
 	{
 		this.name = UNIQUE_CONSTRAINT_PREFIX + entityDetails.getEntityType().getSimpleName().toUpperCase() + "_" + constraint.getName().toUpperCase();
 		
-		FieldDetails fieldDetails = null;
+		//FieldDetails fieldDetails = null;
 		columns = new String[constraint.getFields().size()];
 		
 		int idx = 0;
 		
 		for(String field: constraint.getFields())
 		{
-			fieldDetails = entityDetails.getFieldDetailsByField(field);
-			columns[idx] = fieldMapping.get(fieldDetails.getColumn());
+			//fieldDetails = entityDetails.getFieldDetailsByField(field);
+			columns[idx] = fieldMapping.get(field);
 			
 			idx++;
 		}

@@ -2,8 +2,12 @@ package com.fw.persistence;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -28,6 +32,8 @@ import com.fw.persistence.annotations.Indexed;
 import com.fw.persistence.annotations.Indexes;
 import com.fw.persistence.annotations.UniqueConstraint;
 import com.fw.persistence.annotations.UniqueConstraints;
+import com.fw.persistence.monitor.EntityDetailsMonitor;
+import com.fw.persistence.monitor.IEntityCreateTableListener;
 import com.fw.persistence.query.CreateIndexQuery;
 import com.fw.persistence.query.CreateTableQuery;
 
@@ -37,7 +43,8 @@ public class EntityDetailsFactory
 	private static final String SPECIAL_CHAR_PATTERN = "[\\W\\_]+";
 	
 	private Map<Class<?>, EntityDetails> typeToDetails = new HashMap<>();
-	
+
+	private EntityDetailsMonitor entityDetailsMonitor = new EntityDetailsMonitor();
 	
 	/**
 	 * Removes non aplha numeric characters (including underscore) from column names and sets it as key and the actual column
@@ -125,13 +132,18 @@ public class EntityDetailsFactory
 			}
 		});
 		
+		//if no foreign constraints are defined
 		if(foreignConstraintDetails == null)
 		{
 			return;
 		}
 		
+		//add foreign constraint at entity level to source and target entity
 		entityDetails.addForeignConstraintDetails(foreignConstraintDetails);
 		foreignConstraintDetails.getTargetEntityDetails().addChildConstraint(foreignConstraintDetails);
+		
+		//add constraint at field level
+		fieldDetails.setForeignConstraintDetails(foreignConstraintDetails);
 		
 		logger.trace("Added foreign-constraint {} to entity: {}", foreignConstraintDetails, entityDetails);
 	}
@@ -163,6 +175,17 @@ public class EntityDetailsFactory
 		entityDetails.addIndexDetails(new IndexDetails(name, fields));
 	}
 	
+	/**
+	 * Fetches the entity details for specified type from cache. If not found in cache, returns null.
+	 * @param entityType
+	 * @return
+	 */
+	public synchronized EntityDetails getEntityDetailsFromCache(Class<?> entityType)
+	{
+		//check in cache
+		return typeToDetails.get(entityType);
+	}
+	
 	public synchronized EntityDetails getEntityDetails(Class<?> entityType, IDataStore dataStore, boolean createTables)
 	{
 		EntityDetails entityDetails = typeToDetails.get(entityType);
@@ -192,6 +215,7 @@ public class EntityDetailsFactory
 		try
 		{
 			flattenColumnMap = flattenColumnNames(entityDetails.getTableName(), dataStore);
+			entityDetails.setTableCreated(true);
 		}catch(RuntimeException ex)
 		{
 			if(!createTables)
@@ -243,18 +267,6 @@ public class EntityDetailsFactory
 				}
 			}
 			
-			/*
-			foreignConstraints = cls.getAnnotation(ForeignConstraints.class);
-			
-			if(foreignConstraints != null)
-			{
-				for(ForeignConstraint constraint: foreignConstraints.value())
-				{
-					buildForeignConstraint(constraint, entityDetails, dataStore, createTables);	
-				}
-			}
-			*/
-			
 			indexes = cls.getAnnotation(Indexes.class);
 			
 			if(indexes != null)
@@ -284,6 +296,11 @@ public class EntityDetailsFactory
 			throw new InvalidMappingException("No id field is specified for entity-type: " + entityType.getName());
 		}
 		
+		if(!entityDetails.isTableCreated())
+		{
+			throw new IllegalStateException("Entity table is not found or not created - " + entityType.getName());
+		}
+		
 		logger.trace("Completed building of entity details {}", entityDetails);
 		logger.trace("*********************************************************");
 		return entityDetails;
@@ -297,6 +314,7 @@ public class EntityDetailsFactory
 		Indexed indexed = null;
 		DataType dbType = null;
 		DataTypeMapping dataTypeMapping = null;
+		String mappedColumn = null;
 		
 		for(Field field: fields)
 		{
@@ -320,26 +338,36 @@ public class EntityDetailsFactory
 			dbType = (dataTypeMapping != null) ? dataTypeMapping.type() : DataType.UNKNOWN;
 			
 			//flatten the column name
-			columnName = columnName.replaceAll(SPECIAL_CHAR_PATTERN, "");
-			columnName = columnName.toLowerCase();
+			mappedColumn = columnName.replaceAll(SPECIAL_CHAR_PATTERN, "");
+			mappedColumn = mappedColumn.toLowerCase();
 			
 			//get actual column name from flatten column map
-			columnName = (flattenColumnMap != null) ? flattenColumnMap.get(columnName) : null;
+			mappedColumn = (flattenColumnMap != null) ? flattenColumnMap.get(columnName) : null;
 			
-			if(columnName == null)
+			//ensure column name is present
+			if(mappedColumn == null)
 			{
 				//if flattenColumnMap is not null, it indicates the table is already existing
 				// but field is missing
 				if(flattenColumnMap != null)
 				{
+					//ignore fields which are not owned by this table
+					if(!ForeignConstraintDetails.isTableOwnedRelation(field))
+					{
+						logger.trace("Ignoring column mapping for field {} as it is not owned by table", field.getName());
+						continue;
+					}
+
 					throw new InvalidMappingException("Failed to find column mapping for field: " + field.getName() + " in entity: " + entityDetails.getEntityType().getName());
 				}
-				
-				columnName = field.getName();
+			}
+			else
+			{
+				columnName = mappedColumn;
 			}
 			
+			//build the field details
 			buildFieldDetails(field, columnName, dbType, entityDetails);
-			
 			/*
 			idField = field.getAnnotation(IdField.class);
 
@@ -451,14 +479,89 @@ public class EntityDetailsFactory
 	 */
 	private void createRequiredTable(EntityDetails entityDetails, IDataStore dataStore)
 	{
-		FieldDetails idFieldDetails = entityDetails.getIdField();
+		Collection<ForeignConstraintDetails> foreignConstraintsLst = entityDetails.getForeignConstraints();
+		Set<Class<?>> requiredParentEntitiesSet = new HashSet<>();
+		List<JoinTableDetails> joinTableList = new ArrayList<>();
 		
-		//check if sequence needs to be created for id field, if yes, create it
-		if(idFieldDetails != null && idFieldDetails.getGenerationType() == GenerationType.SEQUENCE)
+		//fetch required parent tables based on foreign key constraint on this entity
+		if(foreignConstraintsLst != null)
 		{
-			dataStore.checkAndCreateSequence(idFieldDetails.getSequenceName());
+			for(ForeignConstraintDetails constraint : foreignConstraintsLst)
+			{
+				//if the relation is maintained by target entity, ignore
+				if(constraint.isMappedRelation())
+				{
+					continue;
+				}
+				
+				requiredParentEntitiesSet.add(constraint.getTargetEntityDetails().getEntityType());
+				
+				//track required join tables
+				if(constraint.getJoinTableDetails() != null)
+				{
+					joinTableList.add(constraint.getJoinTableDetails());
+				}
+			}
 		}
 		
+		Class<?> requiredParentEntities[] = requiredParentEntitiesSet.toArray(new Class<?>[0]);
+
+		//create a listener which can create tables for current entity after all dependency tables are created
+		IEntityCreateTableListener listener = new IEntityCreateTableListener()
+		{
+			@Override
+			public void tableCreated(EntityDetails parentEntityDetails)
+			{
+				//wait till all required entity tables are created
+				if(!entityDetailsMonitor.isTablesCreated(requiredParentEntities))
+				{
+					return;
+				}
+				
+				FieldDetails idFieldDetails = entityDetails.getIdField();
+				
+				//check if sequence needs to be created for id field, if yes, create it
+				if(idFieldDetails != null && idFieldDetails.getGenerationType() == GenerationType.SEQUENCE)
+				{
+					dataStore.checkAndCreateSequence(idFieldDetails.getSequenceName());
+				}
+				
+				createEntityTable(entityDetails, dataStore);
+				
+				for(JoinTableDetails joinTable : joinTableList)
+				{
+					createEntityTable(joinTable.toEntityDetails(), dataStore);
+				}
+				
+				//inform the monitor current entity table is created, so that dependency tables waiting
+					//	 for this table can be created
+				entityDetailsMonitor.tablesCreatedForEntity(entityDetails);
+				
+				entityDetails.setTableCreated(true);
+			}
+		};
+		
+		//if there are no parent table dependencies
+		if(requiredParentEntities.length > 0)
+		{
+			logger.debug("{} waiting for entity table creation - {}", entityDetails, Arrays.toString(requiredParentEntities));
+			entityDetailsMonitor.addCreateTableListener(listener, requiredParentEntities);
+		}
+		//if parent table dependencies are present
+		else
+		{
+			logger.debug("No dependency tables found, so executing create-table query");
+			listener.tableCreated(null);
+		}
+	}
+	
+	/**
+	 * Creates table for specified entity details
+	 * @param entityDetails
+	 * @param dataStore
+	 */
+	private void createEntityTable(EntityDetails entityDetails, IDataStore dataStore)
+	{
 		//create the main table for the entity type
 		CreateTableQuery createTableQuery = new CreateTableQuery(entityDetails);
 		dataStore.createTable(createTableQuery);
@@ -470,7 +573,7 @@ public class EntityDetailsFactory
 		String columns[] = null, fields[] = null;
 		int idx = 0;
 		
-		//check and create required indexed
+		//check and create required indexes
 		for(IndexDetails index: entityDetails.getIndexDetailsList())
 		{
 			fields = index.getFields();

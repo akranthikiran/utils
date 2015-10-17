@@ -39,11 +39,14 @@ public class FieldDetails
 		{
 			throw new NullPointerException("Field can not be null");
 		}
-		
+
+		/*
+		 * Column validation is commented as column is not mandatory for non-owned relation fields
 		if(column == null || column.trim().length() == 0)
 		{
 			throw new NullPointerException("Column can not be null or empty");
 		}
+		*/
 		
 		this.field = field;
 		this.column = column;
@@ -187,6 +190,31 @@ public class FieldDetails
 	public boolean isMappedRelationField()
 	{
 		return (foreignConstraintDetails != null && foreignConstraintDetails.isMappedRelation());
+	}
+	
+	/**
+	 * Returns true, if the relation is joined by external table
+	 * @return
+	 */
+	public boolean isTableJoined()
+	{
+		return ( foreignConstraintDetails != null && (foreignConstraintDetails.getJoinTableDetails() != null) );
+	}
+	
+	/**
+	 * Returns true, if the current column is normal column or if this is relation field and foreign key column is part of current table
+	 * @return
+	 */
+	public boolean isTableOwned()
+	{
+		//if this is normal field
+		if(foreignConstraintDetails == null)
+		{
+			return true;
+		}
+		
+		//return true, if this is not mapped relation and join table is not specified
+		return (!foreignConstraintDetails.isMappedRelation() && (foreignConstraintDetails.getJoinTableDetails() == null));
 	}
 
 	/* (non-Javadoc)

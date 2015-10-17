@@ -28,6 +28,11 @@ public class EntityDetails
 	private List<IndexDetails> indexDetailsList = new ArrayList<>();
 
 	private FieldDetails idField;
+	
+	/**
+	 * Indicates whether table is created
+	 */
+	private boolean isTableCreated = false;
 
 	public EntityDetails(String tableName, Class<?> entityType)
 	{
@@ -59,7 +64,12 @@ public class EntityDetails
 
 			if(column == null)
 			{
-				throw new IllegalArgumentException("Field Mapping for field: " + name);
+				if(!fieldDetails.isTableOwned())
+				{
+					continue;
+				}
+				
+				throw new IllegalArgumentException("No field-mapping found for field: " + name);
 			}
 
 			fieldDetails.setColumn(column);
@@ -90,7 +100,12 @@ public class EntityDetails
 		}
 
 		fieldToDetails.put(fieldDetails.getField().getName(), fieldDetails);
-		columnToDetails.put(fieldDetails.getColumn(), fieldDetails);
+		
+		//if column name is present, this might be case with non-owned relation fields
+		if(fieldDetails.getColumn() != null)
+		{
+			columnToDetails.put(fieldDetails.getColumn(), fieldDetails);
+		}
 
 		if(fieldDetails.isIdField())
 		{
@@ -255,6 +270,22 @@ public class EntityDetails
 		return Collections.unmodifiableSet(columnToDetails.keySet());
 	}
 	
+	/**
+	 * @return the {@link #isTableCreated isTableCreated}
+	 */
+	public boolean isTableCreated()
+	{
+		return isTableCreated;
+	}
+
+	/**
+	 * @param isTableCreated the {@link #isTableCreated isTableCreated} to set
+	 */
+	public void setTableCreated(boolean isTableCreated)
+	{
+		this.isTableCreated = isTableCreated;
+	}
+
 	/* (non-Javadoc)
 	 * @see java.lang.Object#toString()
 	 */

@@ -7,8 +7,8 @@ package com.fw.persistence;
 public enum RelationType
 {
 	ONE_TO_ONE(false, false),
-	MANY_TO_ONE(true, false),
-	ONE_TO_MANY(false, true),
+	MANY_TO_ONE(false, true),
+	ONE_TO_MANY(true, false),
 	MANY_TO_MANY(true, true);
 	
 	/**

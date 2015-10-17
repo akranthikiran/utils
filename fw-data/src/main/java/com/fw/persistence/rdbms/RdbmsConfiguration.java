@@ -114,7 +114,7 @@ public class RdbmsConfiguration implements Validateable
 		
 		try
 		{
-			paramCollectorDirective.reset(context);;
+			paramCollectorDirective.reset(context);
 			
 			StringWriter writer = new StringWriter();
 			template.process(context, writer);

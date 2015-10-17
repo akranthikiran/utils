@@ -11,8 +11,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.fw.persistence.EntityDetails;
+import com.fw.persistence.ForeignConstraintDetails;
 import com.fw.persistence.ICrudRepository;
 import com.fw.persistence.IDataStore;
+import com.fw.persistence.JoinTableDetails;
 import com.fw.persistence.TransactionException;
 import com.fw.persistence.query.DropTableQuery;
 import com.fw.persistence.repository.executors.QueryExecutor;
@@ -131,6 +133,26 @@ class RepositoryProxy implements InvocationHandler
 	 */
 	private Object dropEntityTable(Object args[])
 	{
+		//if foreign keys are present
+		if(entityDetails.getForeignConstraints() != null)
+		{
+			JoinTableDetails joinTableDetails = null;
+					
+			//loop through foreign constraints and check for join tables
+			for(ForeignConstraintDetails constraintDetails : entityDetails.getForeignConstraints())
+			{
+				joinTableDetails = constraintDetails.getJoinTableDetails();
+				
+				//if join table is present
+				if(joinTableDetails != null)
+				{
+					//drop join table
+					dataStore.dropTable(new DropTableQuery(joinTableDetails.toEntityDetails()));
+				}
+			}
+		}
+		
+		//drop main table
 		dataStore.dropTable(new DropTableQuery(entityDetails));
 		return null;
 	}

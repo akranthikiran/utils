@@ -15,6 +15,8 @@ import javax.persistence.OneToOne;
 
 import org.apache.commons.lang.StringUtils;
 
+import com.fw.persistence.annotations.DataType;
+
 public class ForeignConstraintDetails
 {
 	public static final String FOREIGN_CONSTRAINT_PREFIX = "FK_";
@@ -65,12 +67,32 @@ public class ForeignConstraintDetails
 	}
 	
 	/**
+	 * Creates simple foreign key relationship
+	 * 
+	 * @param targetEntityDetails
+	 * @param ownerField
+	 * @param ownerEntityDetails
+	 */
+	public ForeignConstraintDetails(EntityDetails targetEntityDetails, Field ownerField, EntityDetails ownerEntityDetails)
+	{
+		this.deleteCascaded = true;
+		this.relationType = RelationType.ONE_TO_ONE;
+		
+		this.targetEntityDetails = targetEntityDetails;
+		this.ownerField = ownerField;
+		this.ownerEntityDetails = ownerEntityDetails;
+	}
+
+
+
+	/**
 	 * Gets the preferred name of this constraint
 	 * @return
 	 */
 	public String getConstraintName()
 	{
-		return FOREIGN_CONSTRAINT_PREFIX + targetEntityDetails.getTableName().toUpperCase();
+		String ownerCol = ownerEntityDetails.getFieldDetailsByField(ownerField.getName()).getColumn().toUpperCase();
+		return FOREIGN_CONSTRAINT_PREFIX + ownerEntityDetails.getTableName().toUpperCase() + "_" + ownerCol;
 	}
 
 	/**
@@ -206,7 +228,7 @@ public class ForeignConstraintDetails
 		{
 			// if relation is one-to-many or many-to-many and mappedBy is not
 			// specified
-			if(relationType.isCollectionTargetExpected() && StringUtils.isEmpty(mappedBy))
+			if(relationType.isCollectionExpected() && StringUtils.isEmpty(mappedBy))
 			{
 				throw new InvalidMappingException(String.format("Both 'mappedBy' and '@JoinTable' is missing for %3$s relation for field '%1$s.%2$s' ", sourceEntityDetails.getEntityType().getName(), sourceField.getName(), relationType));
 			}
@@ -227,8 +249,11 @@ public class ForeignConstraintDetails
 		{
 			inverseJoinColumn = targetEntityDetails.getTableName() + "_ID";
 		}
+		
+		DataType sourceDataType = DataType.getDataType(sourceEntityDetails.getIdField().getField().getType());
+		DataType targetDataType = DataType.getDataType(targetEntityDetails.getIdField().getField().getType());
 
-		return new JoinTableDetails(joinTable.name(), joinColumn, inverseJoinColumn);
+		return new JoinTableDetails(joinTable.name(), joinColumn, sourceDataType, inverseJoinColumn, targetDataType, sourceEntityDetails, targetEntityDetails);
 	}
 
 	/**
@@ -264,7 +289,8 @@ public class ForeignConstraintDetails
 
 		// set target entity details on result
 		details.targetEntityDetails = targetEntityDetails;
-
+		details.ownerEntityDetails = sourceEntityDetails;
+		
 		// if mappedBy is used, validate target entity's target field
 		if(mappedBy != null)
 		{
@@ -335,6 +361,50 @@ public class ForeignConstraintDetails
 		}
 
 		return null;
+	}
+
+	/**
+	 * Checks if the column maintaining the relation will be maintained by specified field
+	 * @param field
+	 * @return
+	 */
+	public static boolean isTableOwnedRelation(Field field)
+	{
+		JoinTable joinTable = field.getAnnotation(JoinTable.class);
+		
+		// check if field has one to one mapping
+		OneToOne oneToOneMapping = field.getAnnotation(OneToOne.class);
+
+		if(oneToOneMapping != null)
+		{
+			return ( !StringUtils.isBlank(oneToOneMapping.mappedBy()) && joinTable == null );
+		}
+
+		// check if the field has many to one mapping
+		ManyToOne manyToOneMapping = field.getAnnotation(ManyToOne.class);
+
+		if(manyToOneMapping != null)
+		{
+			return ( joinTable == null );
+		}
+
+		// check if the field has one to many mapping
+		OneToMany oneToManyMapping = field.getAnnotation(OneToMany.class);
+
+		if(oneToManyMapping != null)
+		{
+			return false;
+		}
+
+		// check if the field has many to many mapping
+		ManyToMany manyToManyMapping = field.getAnnotation(ManyToMany.class);
+
+		if(manyToManyMapping != null)
+		{
+			return false;
+		}
+
+		return true;
 	}
 
 	/**

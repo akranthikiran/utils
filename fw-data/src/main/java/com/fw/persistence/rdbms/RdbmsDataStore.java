@@ -7,6 +7,7 @@ import java.io.Reader;
 import java.sql.Blob;
 import java.sql.Clob;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -962,14 +963,28 @@ public class RdbmsDataStore implements IDataStore
 		logger.debug("Trying to drop table '{}' using query: {}", dropQuery.getTableName(), dropQuery);
 		
 		Statement stmt = null;
+		ResultSet rs = null;
 		
 		try(TransactionWrapper<RdbmsTransaction> transaction = transactionManager.newOrExistingTransaction())
 		{
+			Connection connection = transaction.getTransaction().getConnection();
+			
+			//check if table already exists
+			DatabaseMetaData metaData = connection.getMetaData();
+			rs = metaData.getTables(null, null, dropQuery.getTableName(), null);
+			
+			if(!rs.next())
+			{
+				logger.info("No table exists with name '{}'. So ignoring drop request", dropQuery.getTableName());
+				return;
+			}
+			
+			
+			//execute drop query
 			String query = templates.buildQuery(RdbmsConfiguration.DROP_QUERY, "query", dropQuery);
 			
 			logger.debug("Built drop query as: \n\t{}", query);
 			
-			Connection connection = transaction.getTransaction().getConnection();
 			stmt = connection.createStatement();
 			
 			stmt.execute(query);
@@ -983,7 +998,7 @@ public class RdbmsDataStore implements IDataStore
 						+ dropQuery.getTableName() + "' using query: " + dropQuery, ex);
 		}finally
 		{
-			closeResources(null, stmt);
+			closeResources(rs, stmt);
 		}
 	}
 

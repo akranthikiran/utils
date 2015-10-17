@@ -60,13 +60,31 @@ public class ColumnStructure
 			}
 		}
 		
-		if(this.type == null)
+		if(this.type == null || this.type == DataType.UNKNOWN)
 		{
-			this.type = DataType.getDataType(field.getType());
+			Class<?> fieldType = field.getType();
+			
+			//if the field is relation field
+			if(fieldDetails.isRelationField())
+			{
+				//get column type from target entity id field type
+				this.type = DataType.getDataType(fieldDetails.getForeignConstraintDetails().getTargetEntityDetails().getIdField().getField().getType());
+			}
+			//if current field is normal field
+			else
+			{
+				//get column type based on field's java type
+				this.type = DataType.getDataType(fieldType);
+			}
 			
 			if(this.type == null)
 			{
-				throw new PersistenceException("Unsupported data type '" + field.getType() + "' encountered. [Field: " + field.getName() + ", Enttity Type: " + entityType.getName());
+				if(fieldDetails.getDbDataType() == null)
+				{
+					throw new PersistenceException("Unsupported data type '" + fieldType.getName() + "' encountered. [Field: " + field.getName() + ", Enttity Type: " + entityType.getName());
+				}
+				
+				this.type = fieldDetails.getDbDataType();
 			}
 		}
 	}
