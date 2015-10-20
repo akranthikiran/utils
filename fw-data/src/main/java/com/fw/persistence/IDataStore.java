@@ -12,9 +12,9 @@ import com.fw.persistence.query.DeleteQuery;
 import com.fw.persistence.query.DropTableQuery;
 import com.fw.persistence.query.FetchChildrenIdsQuery;
 import com.fw.persistence.query.FinderQuery;
-import com.fw.persistence.query.SaveOrUpdateQuery;
 import com.fw.persistence.query.SaveQuery;
 import com.fw.persistence.query.UpdateQuery;
+import com.fw.utils.ObjectWrapper;
 
 public interface IDataStore
 {
@@ -32,11 +32,18 @@ public interface IDataStore
 	
 	public long getCount(CountQuery existenceQuery, EntityDetails entityDetails);
 	
-	public int save(SaveQuery saveQuery, EntityDetails entityDetails);
+	/**
+	 * Executes the specified save-query using structure details from specified entity-details. And stores
+	 * generated id if any, into idGenerated.
+	 * 
+	 * @param saveQuery
+	 * @param entityDetails
+	 * @param idGenerated
+	 * @return Number of rows effected (1 or zero in general)
+	 */
+	public int save(SaveQuery saveQuery, EntityDetails entityDetails, ObjectWrapper<Object> idGenerated);
 
 	public int update(UpdateQuery updateQuery, EntityDetails entityDetails);
-	
-	public int saveOrUpdate(SaveOrUpdateQuery saveOrUpdateQuery, EntityDetails entityDetails);
 	
 	public int delete(DeleteQuery deleteQuery, EntityDetails entityDetails);
 	

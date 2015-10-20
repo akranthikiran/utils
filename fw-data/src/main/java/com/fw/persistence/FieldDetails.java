@@ -216,6 +216,35 @@ public class FieldDetails
 		//return true, if this is not mapped relation and join table is not specified
 		return (!foreignConstraintDetails.isMappedRelation() && (foreignConstraintDetails.getJoinTableDetails() == null));
 	}
+	
+	/* (non-Javadoc)
+	 * @see java.lang.Object#equals(java.lang.Object)
+	 */
+	@Override
+	public boolean equals(Object obj)
+	{
+		if(obj == this)
+		{
+			return true;
+		}
+
+		if(!(obj instanceof FieldDetails))
+		{
+			return false;
+		}
+
+		FieldDetails other = (FieldDetails) obj;
+		return field.equals(other.field);
+	}
+
+	/* (non-Javadoc)
+	 * @see java.lang.Object#hashcode()
+	 */
+	@Override
+	public int hashCode()
+	{
+		return field.hashCode();
+	}
 
 	/* (non-Javadoc)
 	 * @see java.lang.Object#toString()

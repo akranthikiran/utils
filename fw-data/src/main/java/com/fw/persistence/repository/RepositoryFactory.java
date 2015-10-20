@@ -91,7 +91,7 @@ public class RepositoryFactory
 		
 		if(crudRepoType == null)
 		{
-			throw new IllegalStateException("Failed to find super ICrudRepository interface for type: " + repositoryType.getName());
+			throw new IllegalStateException("Specified repository type does not extend ICrudRepository: " + repositoryType.getName());
 		}
 		
 		Type crudRepoParams[] = ((ParameterizedType)crudRepoType).getActualTypeArguments();

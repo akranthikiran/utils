@@ -1,8 +1,8 @@
 package com.fw.test.persitence.entity;
 
-import java.util.Date;
 import java.util.List;
 
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
@@ -19,18 +19,18 @@ public class Order
 	private long id;
 
 	@Column
-	private Date orderDate;
+	private int orderNo;
 	
 	@ManyToOne
 	@Column(name = "CUST_ID")
 	private Customer customer;
 	
-	@OneToMany(mappedBy = "order")
+	@OneToMany(mappedBy = "order", cascade = {CascadeType.PERSIST})
 	private List<OrderItem> items;
 	
-	public Order(Date orderDate, Customer customer, List<OrderItem> items)
+	public Order(int orderNo, Customer customer, List<OrderItem> items)
 	{
-		this.orderDate = orderDate;
+		this.orderNo = orderNo;
 		this.customer = customer;
 		this.items = items;
 	}
@@ -52,19 +52,19 @@ public class Order
 	}
 
 	/**
-	 * @return the {@link #orderDate orderDate}
+	 * @return the {@link #orderNo orderNo}
 	 */
-	public Date getOrderDate()
+	public int getOrderNo()
 	{
-		return orderDate;
+		return orderNo;
 	}
 
 	/**
-	 * @param orderDate the {@link #orderDate orderDate} to set
+	 * @param orderNo the {@link #orderNo orderNo} to set
 	 */
-	public void setOrderDate(Date orderDate)
+	public void setOrderNo(int orderNo)
 	{
-		this.orderDate = orderDate;
+		this.orderNo = orderNo;
 	}
 
 	/**

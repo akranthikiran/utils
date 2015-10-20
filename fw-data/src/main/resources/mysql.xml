@@ -45,11 +45,22 @@
 					<#assign comma>,</#assign>
 				<#elseif query.tableStructure.constraintsAvailable>
 					<#assign comma>,</#assign>
+				<#elseif !query.joinTable>
+					<#assign comma>,</#assign>
 				</#if>
 				
 				${column.name}		${dataType}			${constraint}</@trim>${comma}
 			</#list>
 			
+			<#if !query.joinTable>
+				<#assign comma></#assign>
+				<#if query.tableStructure.constraintsAvailable>
+					<#assign comma>,</#assign>
+				</#if>
+				UQ_ENTITY_ID		VARCHAR(100)			NOT NULL,
+				CONSTRAINT UQ_${query.tableName}_UQ_ENTITY_ID UNIQUE (UQ_ENTITY_ID)${comma}
+			</#if>
+
 			<#list query.tableStructure.uniqueConstraints as constraint>
 				<@trim><#assign comma></#assign>
 				

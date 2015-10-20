@@ -44,11 +44,11 @@ import com.fw.persistence.query.DeleteQuery;
 import com.fw.persistence.query.DropTableQuery;
 import com.fw.persistence.query.FetchChildrenIdsQuery;
 import com.fw.persistence.query.FinderQuery;
-import com.fw.persistence.query.SaveOrUpdateQuery;
 import com.fw.persistence.query.SaveQuery;
 import com.fw.persistence.query.UpdateQuery;
 import com.fw.persistence.rdbms.converters.BlobConverter;
 import com.fw.persistence.rdbms.converters.ClobConverter;
+import com.fw.utils.ObjectWrapper;
 
 public class RdbmsDataStore implements IDataStore
 {
@@ -476,12 +476,13 @@ public class RdbmsDataStore implements IDataStore
 	}
 
 	@Override
-	public int save(SaveQuery saveQuery, EntityDetails entityDetails)
+	public int save(SaveQuery saveQuery, EntityDetails entityDetails, ObjectWrapper<Object> idGenerated)
 	{
 		logger.trace("Started method: save");
 		logger.debug("Trying to save entity to table '{}' using query: {}", saveQuery.getTableName(), saveQuery);
 		
 		PreparedStatement pstmt = null;
+		ResultSet keysRs = null;
 		
 		try(TransactionWrapper<RdbmsTransaction> transaction = transactionManager.newOrExistingTransaction())
 		{
@@ -511,19 +512,36 @@ public class RdbmsDataStore implements IDataStore
 			
 			int count = pstmt.executeUpdate();
 			
-			logger.debug("Saved " + count + " records into table: " + saveQuery.getTableName());
+			//if the save was successful
+			if(count > 0)
+			{
+				//try to fetch generated ids
+				keysRs = pstmt.getGeneratedKeys();
+				
+				//if keys are found to be generated
+				if(keysRs != null && keysRs.next())
+				{
+					idGenerated.setValue(keysRs.getObject(1));
+				}
+				else
+				{
+					logger.debug("No keys are generated as part of the last statement");
+				}
+			}
+			
+			logger.debug("Saved {} records into table: {}", count, saveQuery.getTableName());
 			
 			transaction.commit();
 			return count;
 		}catch(Exception ex)
 		{
-			logger.error("An error occurred while saving entity to table '" 
-					+ saveQuery.getTableName() + "' using query: " + saveQuery, ex);
+			logger.error("An error occurred while saving entity to table '{}' using query: {}", saveQuery.getTableName(), saveQuery, ex);
+			
 			throw new PersistenceException("An error occurred while saving entity to table '" 
 						+ saveQuery.getTableName() + "' using query: " + saveQuery, ex);
 		}finally
 		{
-			closeResources(null, pstmt);
+			closeResources(keysRs, pstmt);
 		}
 	}
 
@@ -582,75 +600,6 @@ public class RdbmsDataStore implements IDataStore
 		}
 	}
 	
-	@Override
-	public int saveOrUpdate(SaveOrUpdateQuery saveOrUpdateQuery, EntityDetails entityDetails)
-	{
-		logger.trace("Started method: saveOrUpdate");
-		logger.debug("Trying to save or update entity in table '{}' using query: ", saveOrUpdateQuery.getTableName(), saveOrUpdateQuery);
-		
-		if(!templates.hasQuery(RdbmsConfiguration.SAVE_UPDATE_QUERY))
-		{
-			throw new UnsupportedOperationException("Sav-update operation is not supported by this data-store");
-		}
-		
-		PreparedStatement pstmt = null;
-		
-		try(TransactionWrapper<RdbmsTransaction> transaction = transactionManager.newOrExistingTransaction())
-		{
-			String query = templates.buildQuery(RdbmsConfiguration.SAVE_UPDATE_QUERY, "query", saveOrUpdateQuery);
-			
-			logger.debug("Built save-update query as: \n\t{}", query);
-			
-			Connection connection = transaction.getTransaction().getConnection();
-			pstmt = connection.prepareStatement(query);
-			int index = 1;
-			List<Object> params = new ArrayList<>();
-			
-			for(ColumnParam column: saveOrUpdateQuery.getInsertColumns())
-			{
-				if(column.isSequenceGenerated())
-				{
-					continue;
-				}
-				
-				pstmt.setObject(index, column.getValue());
-				params.add(column.getValue());
-				
-				index++;
-			}
-			
-			for(ColumnParam column: saveOrUpdateQuery.getUpdateColumns())
-			{
-				if(column.isSequenceGenerated())
-				{
-					continue;
-				}
-				
-				pstmt.setObject(index, column.getValue());
-				params.add(column.getValue());
-				
-				index++;
-			}
-			
-			logger.debug("Executing using params: {}", params);
-			
-			int count = pstmt.executeUpdate();
-			
-			logger.debug("Updated/created " + count + " records in table: " + saveOrUpdateQuery.getTableName());
-			
-			transaction.commit();
-			return count;
-		}catch(Exception ex)
-		{
-			logger.error("An error occurred while updating entity(s) to table '" 
-					+ saveOrUpdateQuery.getTableName() + "' using query: " + saveOrUpdateQuery, ex);
-			throw new PersistenceException("An error occurred while updating entity(s) to table '" 
-						+ saveOrUpdateQuery.getTableName() + "' using query: " + saveOrUpdateQuery, ex);
-		}finally
-		{
-			closeResources(null, pstmt);
-		}
-	}
 
 	@Override
 	public int delete(DeleteQuery deleteQuery, EntityDetails entityDetails)

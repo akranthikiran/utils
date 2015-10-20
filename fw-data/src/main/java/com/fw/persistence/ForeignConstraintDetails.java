@@ -16,6 +16,7 @@ import javax.persistence.OneToOne;
 import org.apache.commons.lang.StringUtils;
 
 import com.fw.persistence.annotations.DataType;
+import com.fw.persistence.annotations.DeleteWithParent;
 
 public class ForeignConstraintDetails
 {
@@ -26,12 +27,18 @@ public class ForeignConstraintDetails
 	 * And also indicates this entity does not maintain any direct relation
 	 */
 	private String mappedBy;
-
+	
 	/**
 	 * Indicates whether child entities should be removed when parent is removed
-	 * (controlled by delete cascade attribute while creating table).
+	 * (controlled by delete cascade attribute while creating table). Default is false
 	 */
-	private boolean deleteCascaded;
+	private boolean isDeleteCascaded = false;
+	
+	/**
+	 * Should (and will be considered) on fields holding inverse/mapped relation. And if specified, with save of current entity
+	 * the child entity will also get persisted. Default is false
+	 */
+	private boolean isSaveCascaded = false;
 
 	/**
 	 * Provides details of the joining table, required for many-to-many relation
@@ -58,10 +65,9 @@ public class ForeignConstraintDetails
 	 */
 	private EntityDetails ownerEntityDetails;
 	
-	public ForeignConstraintDetails(String mappedBy, boolean deleteCascaded, RelationType relationType, Field ownerField)
+	public ForeignConstraintDetails(String mappedBy, RelationType relationType, Field ownerField)
 	{
 		this.mappedBy = mappedBy;
-		this.deleteCascaded = deleteCascaded;
 		this.relationType = relationType;
 		this.ownerField = ownerField;
 	}
@@ -75,7 +81,7 @@ public class ForeignConstraintDetails
 	 */
 	public ForeignConstraintDetails(EntityDetails targetEntityDetails, Field ownerField, EntityDetails ownerEntityDetails)
 	{
-		this.deleteCascaded = true;
+		this.isDeleteCascaded = true;
 		this.relationType = RelationType.ONE_TO_ONE;
 		
 		this.targetEntityDetails = targetEntityDetails;
@@ -101,7 +107,7 @@ public class ForeignConstraintDetails
 	 * @param cascadeOptions
 	 * @return
 	 */
-	private static boolean isDeleteCascaded(CascadeType cascadeOptions[])
+	private static boolean isCascaded(CascadeType cascadeOptions[], CascadeType target)
 	{
 		// if no cascade options are specified
 		if(cascadeOptions == null)
@@ -114,7 +120,7 @@ public class ForeignConstraintDetails
 		for(CascadeType type : cascadeOptions)
 		{
 			// if remove is specified
-			if(type == CascadeType.REMOVE)
+			if(type == target)
 			{
 				// assume child needs to be deleted with parent
 				return true;
@@ -268,13 +274,15 @@ public class ForeignConstraintDetails
 	 * @param entityDetailsProvider
 	 * @return
 	 */
-	private static ForeignConstraintDetails getForeignConstraint(String mappedBy, boolean delCascaded, RelationType relationType, EntityDetails sourceEntityDetails, Field sourceField, Function<Class<?>, EntityDetails> entityDetailsProvider)
+	private static ForeignConstraintDetails getForeignConstraint(String mappedBy, CascadeType cascadedTypes[], RelationType relationType, EntityDetails sourceEntityDetails, Field sourceField, Function<Class<?>, EntityDetails> entityDetailsProvider)
 	{
 		// if mapped by is not defined (by default it is empty string), make it
 		// into null
 		mappedBy = StringUtils.isBlank(mappedBy) ? null : mappedBy.trim();
 
-		ForeignConstraintDetails details = new ForeignConstraintDetails(mappedBy, delCascaded, relationType, sourceField);
+		ForeignConstraintDetails details = new ForeignConstraintDetails(mappedBy, relationType, sourceField);
+		details.isDeleteCascaded = (sourceField.getAnnotation(DeleteWithParent.class) != null);
+		details.isSaveCascaded = isCascaded(cascadedTypes, CascadeType.PERSIST);
 
 		Class<?> sourceFieldType = getFieldType(sourceEntityDetails.getEntityType(), sourceField, relationType.isCollectionExpected(), null);
 
@@ -311,6 +319,20 @@ public class ForeignConstraintDetails
 				throw new InvalidMappingException(String.format("Entity relation target field's type '%1.%2' is not matching with source entity type '%3'. Relation source field '%3.%4'", targetEntityDetails.getEntityType().getName(), targetField.getName(), sourceEntityDetails.getEntityType().getName(), sourceField.getName()));
 			}
 		}
+		else
+		{
+			if(details.isSaveCascaded)
+			{
+				throw new InvalidMappingException( String.format("Save-cascade is mentioned on non-mapped relation (non-child/parent relation) '%1.%2'. Save cascade is supported only from parent entity to child.", 
+						sourceEntityDetails.getEntityType().getName(), sourceField.getName()) );
+			}
+		}
+		
+		if(details.isSaveCascaded && relationType.isCollectionTargetExpected())
+		{
+			throw new InvalidMappingException( String.format("Invalid save-cascade encountered on field '%1.%2'. Save cascade is not supported for many-to-one and many-to-many relation.", 
+					sourceEntityDetails.getEntityType().getName(), sourceField.getName()) );
+		}
 
 		// validate and get join table details, if any
 		details.joinTableDetails = getJoinTableDetails(sourceEntityDetails, sourceField, mappedBy, relationType, targetEntityDetails);
@@ -333,7 +355,7 @@ public class ForeignConstraintDetails
 
 		if(oneToOneMapping != null)
 		{
-			return getForeignConstraint(oneToOneMapping.mappedBy(), isDeleteCascaded(oneToOneMapping.cascade()), RelationType.ONE_TO_ONE, entityDetails, field, entityDetailsProvider);
+			return getForeignConstraint(oneToOneMapping.mappedBy(), oneToOneMapping.cascade(), RelationType.ONE_TO_ONE, entityDetails, field, entityDetailsProvider);
 		}
 
 		// check if the field has many to one mapping
@@ -341,7 +363,7 @@ public class ForeignConstraintDetails
 
 		if(manyToOneMapping != null)
 		{
-			return getForeignConstraint(null, isDeleteCascaded(manyToOneMapping.cascade()), RelationType.MANY_TO_ONE, entityDetails, field, entityDetailsProvider);
+			return getForeignConstraint(null, manyToOneMapping.cascade(), RelationType.MANY_TO_ONE, entityDetails, field, entityDetailsProvider);
 		}
 
 		// check if the field has one to many mapping
@@ -349,7 +371,7 @@ public class ForeignConstraintDetails
 
 		if(oneToManyMapping != null)
 		{
-			return getForeignConstraint(oneToManyMapping.mappedBy(), isDeleteCascaded(oneToManyMapping.cascade()), RelationType.ONE_TO_MANY, entityDetails, field, entityDetailsProvider);
+			return getForeignConstraint(oneToManyMapping.mappedBy(), oneToManyMapping.cascade(), RelationType.ONE_TO_MANY, entityDetails, field, entityDetailsProvider);
 		}
 
 		// check if the field has many to many mapping
@@ -357,7 +379,7 @@ public class ForeignConstraintDetails
 
 		if(manyToManyMapping != null)
 		{
-			return getForeignConstraint(manyToManyMapping.mappedBy(), isDeleteCascaded(manyToManyMapping.cascade()), RelationType.MANY_TO_MANY, entityDetails, field, entityDetailsProvider);
+			return getForeignConstraint(manyToManyMapping.mappedBy(), manyToManyMapping.cascade(), RelationType.MANY_TO_MANY, entityDetails, field, entityDetailsProvider);
 		}
 
 		return null;
@@ -416,11 +438,19 @@ public class ForeignConstraintDetails
 	}
 
 	/**
-	 * @return the {@link #deleteCascaded deleteCascaded}
+	 * @return the {@link #isDeleteCascaded deleteCascaded}
 	 */
 	public boolean isDeleteCascaded()
 	{
-		return deleteCascaded;
+		return isDeleteCascaded;
+	}
+	
+	/**
+	 * @return the {@link #isSaveCascaded isSaveCascaded}
+	 */
+	public boolean isSaveCascaded()
+	{
+		return isSaveCascaded;
 	}
 
 	/**
@@ -486,7 +516,7 @@ public class ForeignConstraintDetails
 		builder.append("[");
 
 		builder.append("Mapped By: ").append(mappedBy);
-		builder.append(",").append("Delete-cascaded: ").append(deleteCascaded);
+		builder.append(",").append("Delete-cascaded: ").append(isDeleteCascaded);
 		builder.append(",").append("Relation Type: ").append(relationType);
 		builder.append(",").append("Join Table: ").append(joinTableDetails);
 		builder.append(",").append("Target Entity: ").append(targetEntityDetails.getEntityType().getName());

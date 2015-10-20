@@ -2,6 +2,7 @@ package com.fw.test.persitence.entity;
 
 import java.util.List;
 
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
@@ -25,7 +26,7 @@ public class Customer
 	@JoinTable(name = "CUST_GROUP_CUST")
 	private List<CustomerGroup> customerGroups;
 
-	@OneToMany(mappedBy = "customer")
+	@OneToMany(mappedBy = "customer", cascade = {CascadeType.PERSIST})
 	private List<Order> orders;
 
 	public Customer(String name, List<CustomerGroup> customerGroups, List<Order> orders)

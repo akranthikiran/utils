@@ -10,12 +10,11 @@ import java.util.List;
 import java.util.Map;
 
 import com.fw.persistence.EntityDetails;
-import com.fw.persistence.repository.executors.DeleteQueryExecutor;
 import com.fw.persistence.repository.executors.CountQueryExecutor;
+import com.fw.persistence.repository.executors.DeleteQueryExecutor;
 import com.fw.persistence.repository.executors.FinderQueryExecutor;
 import com.fw.persistence.repository.executors.QueryExecutor;
 import com.fw.persistence.repository.executors.QueryExecutorPattern;
-import com.fw.persistence.repository.executors.SaveOrUpdateQueryExecutor;
 import com.fw.persistence.repository.executors.SaveQueryExecutor;
 import com.fw.persistence.repository.executors.UpdateQueryExecutor;
 
@@ -149,7 +148,6 @@ public class ExecutorFactory
 	{
 		registerExecutor(CountQueryExecutor.class);
 		registerExecutor(FinderQueryExecutor.class);
-		registerExecutor(SaveOrUpdateQueryExecutor.class);
 		registerExecutor(SaveQueryExecutor.class);
 		registerExecutor(DeleteQueryExecutor.class);
 		registerExecutor(UpdateQueryExecutor.class);

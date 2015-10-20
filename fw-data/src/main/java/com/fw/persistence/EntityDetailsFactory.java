@@ -296,10 +296,12 @@ public class EntityDetailsFactory
 			throw new InvalidMappingException("No id field is specified for entity-type: " + entityType.getName());
 		}
 		
+		/*
 		if(!entityDetails.isTableCreated())
 		{
 			throw new IllegalStateException("Entity table is not found or not created - " + entityType.getName());
 		}
+		*/
 		
 		logger.trace("Completed building of entity details {}", entityDetails);
 		logger.trace("*********************************************************");
@@ -526,11 +528,11 @@ public class EntityDetailsFactory
 					dataStore.checkAndCreateSequence(idFieldDetails.getSequenceName());
 				}
 				
-				createEntityTable(entityDetails, dataStore);
+				createEntityTable(entityDetails, dataStore, false);
 				
 				for(JoinTableDetails joinTable : joinTableList)
 				{
-					createEntityTable(joinTable.toEntityDetails(), dataStore);
+					createEntityTable(joinTable.toEntityDetails(), dataStore, true);
 				}
 				
 				//inform the monitor current entity table is created, so that dependency tables waiting
@@ -560,10 +562,10 @@ public class EntityDetailsFactory
 	 * @param entityDetails
 	 * @param dataStore
 	 */
-	private void createEntityTable(EntityDetails entityDetails, IDataStore dataStore)
+	private void createEntityTable(EntityDetails entityDetails, IDataStore dataStore, boolean isJoinTable)
 	{
 		//create the main table for the entity type
-		CreateTableQuery createTableQuery = new CreateTableQuery(entityDetails);
+		CreateTableQuery createTableQuery = new CreateTableQuery(entityDetails, isJoinTable);
 		dataStore.createTable(createTableQuery);
 
 		//reset the column mapping, to take new column names (if any) into consideration

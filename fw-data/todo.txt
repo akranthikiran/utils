@@ -66,6 +66,10 @@ update/insert query methods should accept implicit values for fields
 
 
 Cross dependency among entities using foreign keys should be handled
+
+Have validation to disallow reserved words for columns - GEN_UQ_ID
+
+Disable auto checking for unique constraint
 ============================================================================
 ============================================================================
 

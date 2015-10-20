@@ -6,6 +6,9 @@ package com.fw.persistence;
  */
 public class JoinTableEntity
 {
+	public static final String FIELD_JOIN_COLUMN = "joinColumn";
+	public static final String FIELD_INV_JOIN_COLUMN = "inverseJoinColumn";
+	
 	private Object joinColumn;
 	private Object inverseJoinColumn;
 

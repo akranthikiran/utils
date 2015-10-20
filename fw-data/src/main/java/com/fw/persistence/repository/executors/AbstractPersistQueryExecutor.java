@@ -1,8 +1,6 @@
 package com.fw.persistence.repository.executors;
 
-import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.apache.logging.log4j.LogManager;
@@ -15,13 +13,11 @@ import com.fw.persistence.ForeignConstraintDetails;
 import com.fw.persistence.ForeignConstraintViolationException;
 import com.fw.persistence.IDataStore;
 import com.fw.persistence.Operator;
-import com.fw.persistence.Record;
 import com.fw.persistence.UniqueConstraintDetails;
 import com.fw.persistence.UniqueConstraintViolationException;
 import com.fw.persistence.conversion.ConversionService;
 import com.fw.persistence.query.ConditionParam;
 import com.fw.persistence.query.CountQuery;
-import com.fw.persistence.query.FinderQuery;
 
 public abstract class AbstractPersistQueryExecutor extends QueryExecutor
 {
@@ -136,55 +132,4 @@ public abstract class AbstractPersistQueryExecutor extends QueryExecutor
 			}
 		}
 	}
-	
-	protected Object fetchId(Object entity, IDataStore dataStore, ConversionService conversionService)
-	{
-		logger.trace("Started method: fetchId");
-		
-		FieldDetails idFieldDetails = entityDetails.getIdField();
-		
-		if(!idFieldDetails.isAutoFetch())
-		{
-			return null;
-		}
-		
-		Collection<UniqueConstraintDetails> uniqueConstraints = entityDetails.getUniqueConstraints();
-		
-		if(uniqueConstraints == null || uniqueConstraints.isEmpty())
-		{
-			logger.warn("No unique contraint found on entity '" + entityDetails.getEntityType().getName() + "' for fetching generated id");
-			return null;
-		}
-		
-		UniqueConstraintDetails uniqueConstraint = uniqueConstraints.iterator().next();
-		
-		FinderQuery findQuery = new FinderQuery(entityDetails);
-		findQuery.addColumn(idFieldDetails.getColumn());
-		
-		FieldDetails fieldDetails = null;
-		Object value = null;
-		
-		for(String field: uniqueConstraint.getFields())
-		{
-			fieldDetails = entityDetails.getFieldDetailsByField(field);
-			
-			value = fieldDetails.getValue(entity);
-			value = conversionService.convertToDBType(value, fieldDetails);
-			
-			findQuery.addCondition(new ConditionParam(fieldDetails.getColumn(), value, -1));
-		}
-		
-		List<Record> records = dataStore.executeFinder(findQuery, entityDetails);
-		
-		if(records == null || records.isEmpty())
-		{
-			return null;
-		}
-		
-		Object idValue = conversionService.convertToJavaType(records.get(0).getObject(0), idFieldDetails);
-		idFieldDetails.setValue(entity, idValue);
-		
-		return idValue;
-	}
-
 }
