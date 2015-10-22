@@ -39,14 +39,14 @@ public class TCrudFunctionality extends TestSuiteBase
 	{
 		IEmployeeRepository empRepository = factory.getRepository(IEmployeeRepository.class);
 		
-		Employee emp = new Employee("12345", "kranthi@kk.com", "kranthi", "90232333");
+		Employee emp = new Employee("12345", "kranthi@kk.com", "kranthi", "90232333", 28);
 		empRepository.save(emp);
 		
 		//ensure id is being fetched as part of save
 		Assert.assertTrue(emp.getId() > 0);
 			
 		//create employee with same emp-id
-		Employee emp1 = new Employee("12345", "kiran@kk.com", "kiran", "90231223");
+		Employee emp1 = new Employee("12345", "kiran@kk.com", "kiran", "90231223", 28);
 		
 		try
 		{
@@ -58,7 +58,7 @@ public class TCrudFunctionality extends TestSuiteBase
 		}
 		
 		//create employee with same email-id
-		Employee emp2 = new Employee("12346", "kranthi@kk.com", "kiran", "90231223");
+		Employee emp2 = new Employee("12346", "kranthi@kk.com", "kiran", "90231223", 28);
 		
 		try
 		{
@@ -80,14 +80,14 @@ public class TCrudFunctionality extends TestSuiteBase
 	{
 		IEmployeeRepository empRepository = factory.getRepository(IEmployeeRepository.class);
 		
-		Employee emp = new Employee("12345", "kranthi@kk.com", "kranthi", "90232333");
+		Employee emp = new Employee("12345", "kranthi@kk.com", "kranthi", "90232333", 28);
 		empRepository.save(emp);
 		
-		Employee emp1 = new Employee("123452", "kiran@kk.com", "kiran", "90232333");
+		Employee emp1 = new Employee("123452", "kiran@kk.com", "kiran", "90232333", 28);
 		empRepository.save(emp1);
 		
 		//update the emp with different emp id and email id
-		Employee empForUpdate = new Employee("12345", "kranthi123@kk.com", "kranthi12", "12390232333");
+		Employee empForUpdate = new Employee("12345", "kranthi123@kk.com", "kranthi12", "12390232333", 28);
 		empForUpdate.setId(emp.getId());
 		Assert.assertTrue(empRepository.update(empForUpdate));
 		
@@ -110,15 +110,15 @@ public class TCrudFunctionality extends TestSuiteBase
 	{
 		IEmployeeRepository empRepository = factory.getRepository(IEmployeeRepository.class);
 		
-		Employee emp = new Employee("12345", "kranthi@kk.com", "kranthi", "90232333");
+		Employee emp = new Employee("12345", "kranthi@kk.com", "kranthi", "90232333", 28);
 		empRepository.save(emp);
 		
-		Employee emp1 = new Employee("123452", "kiran@kk.com", "kiran", "90232333");
+		Employee emp1 = new Employee("123452", "kiran@kk.com", "kiran", "90232333", 28);
 		empRepository.save(emp1);
 
 		try
 		{
-			Employee empForUpdate = new Employee("1234523", "kiran@kk.com", "kranthi12", "12390232333");
+			Employee empForUpdate = new Employee("1234523", "kiran@kk.com", "kranthi12", "12390232333", 28);
 			empForUpdate.setId(emp.getId());
 			
 			empRepository.update(empForUpdate);
@@ -142,15 +142,15 @@ public class TCrudFunctionality extends TestSuiteBase
 	{
 		IEmployeeRepository empRepository = factory.getRepository(IEmployeeRepository.class);
 		
-		Employee emp = new Employee("12345", "kranthi@kk.com", "kranthi", "90232333");
+		Employee emp = new Employee("12345", "kranthi@kk.com", "kranthi", "90232333", 28);
 		empRepository.save(emp);
 		long empId = emp.getId();
 		
-		Employee emp1 = new Employee("123452", "kiran@kk.com", "kiran", "90232333");
+		Employee emp1 = new Employee("123452", "kiran@kk.com", "kiran", "90232333", 28);
 		empRepository.save(emp1);
 		long empId1 = emp1.getId();
 
-		Employee emp2 = new Employee("123455", "abc@kk.com", "abc", "887788778");
+		Employee emp2 = new Employee("123455", "abc@kk.com", "abc", "887788778", 28);
 		empRepository.save(emp2);
 
 		Employee foundEmployee = empRepository.findById(empId1);
@@ -160,7 +160,7 @@ public class TCrudFunctionality extends TestSuiteBase
 		Assert.assertEquals(empId, foundEmployee.getId());
 		
 		Assert.assertEquals(empId, empRepository.findIdByEmail("kranthi@kk.com"));
-		Assert.assertEquals("kiran@kk.com", empRepository.findEmailByEmpno("123452"));
+		Assert.assertEquals("kiran@kk.com", empRepository.findEmailByEmployeeNo("123452"));
 		
 		Assert.assertEquals(2, empRepository.findByPhoneNo("%90%").size());
 		
@@ -179,13 +179,13 @@ public class TCrudFunctionality extends TestSuiteBase
 		{
 			IEmployeeRepository empRepository = factory.getRepository(IEmployeeRepository.class);
 			
-			Employee emp = new Employee("12345", "kranthi@kk.com", "kranthi", "90232333");
+			Employee emp = new Employee("12345", "kranthi@kk.com", "kranthi", "90232333", 28);
 			boolean res = empRepository.saveOrUpdate(emp);
 			
 			Assert.assertTrue(res, "Entity was not saved");
 			Assert.assertTrue(emp.getId() > 0, "Id is not set for saved entity");
 			
-			Employee empForUpdate = new Employee("12345", "kranthi1@kk.com", "kranthi", "902909090");
+			Employee empForUpdate = new Employee("12345", "kranthi1@kk.com", "kranthi", "902909090", 28);
 			res = empRepository.saveOrUpdate(empForUpdate);
 			
 			Assert.assertTrue(res, "Entity was not saved");
@@ -208,10 +208,10 @@ public class TCrudFunctionality extends TestSuiteBase
 	{
 		IEmployeeRepository empRepository = factory.getRepository(IEmployeeRepository.class);
 		
-		Employee emp = new Employee("12345", "kranthi@kk.com", "kranthi", "90232333");
+		Employee emp = new Employee("12345", "kranthi@kk.com", "kranthi", "90232333", 28);
 		empRepository.save(emp);
 		
-		Employee emp1 = new Employee("123452", "kiran@kk.com", "kiran", "90232333");
+		Employee emp1 = new Employee("123452", "kiran@kk.com", "kiran", "90232333", 28);
 		empRepository.save(emp1);
 
 		//ensure two records are present

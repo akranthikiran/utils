@@ -1,17 +1,18 @@
 package com.fw.persistence.repository.executors;
 
+import java.beans.PropertyDescriptor;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -20,37 +21,44 @@ import com.fw.persistence.EntityDetails;
 import com.fw.persistence.FieldDetails;
 import com.fw.persistence.ICrudRepository;
 import com.fw.persistence.IDataStore;
-import com.fw.persistence.PersistenceException;
+import com.fw.persistence.InvalidMappingException;
 import com.fw.persistence.Record;
 import com.fw.persistence.RecordCountMistmatchException;
 import com.fw.persistence.conversion.ConversionService;
-import com.fw.persistence.query.ConditionParam;
 import com.fw.persistence.query.FinderQuery;
 import com.fw.persistence.repository.InvalidRepositoryException;
 import com.fw.persistence.repository.annotations.Field;
+import com.fw.persistence.repository.annotations.ResultMapping;
+import com.fw.persistence.repository.annotations.SearchResult;
 
 @QueryExecutorPattern(prefixes = {"find", "fetch"})
 public class FinderQueryExecutor extends QueryExecutor
 {
 	private static Logger logger = LogManager.getLogger(FinderQueryExecutor.class);
 	
-	private FinderQuery query;
-	
 	private Class<?> returnType;
-	private Map<String, FieldDetails> returnColumnToField = new HashMap<>();
 	private Class<?> collectionReturnType = null;
-	private boolean isReturnTypeEntity = false;
 	
 	private ReentrantLock queryLock = new ReentrantLock();
+	
+	/**
+	 * Keeps track of different parts required by query
+	 */
+	private ConditionQueryBuilder conditionQueryBuilder;
+	
+	/**
+	 * Description of the method
+	 */
+	private String methodDesc;
 	
 	public FinderQueryExecutor(Class<?> repositoryType, Method method, EntityDetails entityDetails)
 	{
 		super.repositoryType = repositoryType;
-		this.query = new FinderQuery(entityDetails);
 		super.entityDetails = entityDetails;
-		
-		fetchReturnDetails(method);
-		
+
+		conditionQueryBuilder = new ConditionQueryBuilder(entityDetails);
+		methodDesc = String.format("finder method '%s' of repository - '%s'", method.getName(), repositoryType.getName());
+
 		Class<?> paramTypes[] = method.getParameterTypes();
 
 		if(paramTypes.length == 0)
@@ -58,49 +66,76 @@ public class FinderQueryExecutor extends QueryExecutor
 			throw new InvalidRepositoryException("No-parameter finder method '" + method.getName() + "' in repository: " + repositoryType.getName());
 		}
 		
-		if(!fetchConditonsByAnnotations(method, query, true) && !fetchConditionsByName(method, query, "finder"))
+		fetchReturnDetails(method);
+		
+		if(!fetchConditonsByAnnotations(method, true, conditionQueryBuilder, methodDesc) && 
+				!fetchConditionsByName(method, conditionQueryBuilder, methodDesc))
 		{
 			throw new InvalidRepositoryException("Failed to determine parameter conditions for finder method '" 
 							+ method.getName() + "' of repository - " + repositoryType.getName());
 		}
-		
 	}
 
-	/*
-	FinderQueryExecutor(Class<?> repositoryType, EntityDetails entityDetails, boolean multiple, Collection<ConditionParam> conditions)
-	{
-		super.repositoryType = repositoryType;
-		this.query = new FinderQuery(entityDetails);
-		super.entityDetails = entityDetails;
-		
-		this.collectionReturnType = multiple ? ArrayList.class : null;
-		this.returnType = entityDetails.getEntityType();
-		
-		setFullEntityDetails();
-		
-		if(conditions != null)
-		{
-			for(ConditionParam condition : conditions)
-			{
-				query.addCondition(condition);
-			}
-		}
-	}
-	*/
-	
-	private void setFullEntityDetails()
+	/**
+	 * Fetches/populates entity fields as result fields
+	 */
+	private void fetchEntityResultFields()
 	{
 		logger.trace("Started method: setFullEntityDetails");
 		
+		//loop through entity details
 		for(FieldDetails field: entityDetails.getFieldDetails())
 		{
-			query.addColumn(field.getColumn());
-			returnColumnToField.put(field.getColumn(), field);
+			//if the field is not owned by this table
+			if(!field.isTableOwned())
+			{
+				continue;
+			}
+
+			//adds the current field as result field
+			conditionQueryBuilder.addResultField(field.getName(), field.getField().getType(), field.getName(), methodDesc);
 		}
 		
-		isReturnTypeEntity = true;
 		this.returnType = entityDetails.getEntityType();
 	}
+	
+	/**
+	 * Fetches result field from return object type
+	 * @param returnType
+	 * @param query
+	 * @param index
+	 */
+	private void fetchResultFieldsFromObject(Class<?> returnType)
+	{
+		java.lang.reflect.Field fields[] = returnType.getDeclaredFields();
+		Field resultField = null;
+		String name = null;
+		
+		//loop through query object type fields 
+		for(java.lang.reflect.Field objField : fields)
+		{
+			resultField = objField.getAnnotation(Field.class);
+			
+			//if field is not marked as condition
+			if(resultField == null)
+			{
+				continue;
+			}
+			
+			//fetch entity field name
+			name = resultField.value();
+			
+			//if name is not specified in condition
+			if(name.trim().length() == 0)
+			{
+				//use field name
+				name = objField.getName();
+			}
+			
+			conditionQueryBuilder.addResultField(objField.getName(), objField.getType(), name, methodDesc);
+		}
+	}
+	
 
 	private void fetchReturnDetails(Method method)
 	{
@@ -149,66 +184,49 @@ public class FinderQueryExecutor extends QueryExecutor
 			this.returnType = (Class<?>)typeArgs[0];
 		}
 		
+		//if return type matches with entity type, add all entity fields as result fields
 		if(entityDetails.getEntityType().equals(this.returnType) || ICrudRepository.class.equals(method.getDeclaringClass()))
 		{
-			setFullEntityDetails();
+			fetchEntityResultFields();
 		}
+		//if method is annotated with Field annotation use that only as return field
 		else if(method.getAnnotation(Field.class) != null)
 		{
 			Field field = method.getAnnotation(Field.class);
-			FieldDetails fieldDetails = entityDetails.getFieldDetailsByField(field.value());
-			
-			if(!returnType.equals(fieldDetails.getField().getType()))
-			{
-				throw new InvalidRepositoryException("Return type '" + method.getReturnType().getName() 
-							+ "' and field type '" + fieldDetails.getField().getName() 
-							+ "' are mismatching for repository method: " + method.getName());
-			}
-			
-			query.addColumn(fieldDetails.getColumn());
-			returnColumnToField.put(fieldDetails.getColumn(), fieldDetails);
+			conditionQueryBuilder.addResultField(null, this.returnType, field.value(), methodDesc);
 		}
-		//TODO: Support bean return types which has column annotations on its fields
+		else if(method.getAnnotation(SearchResult.class) != null)
+		{
+			SearchResult searchResult = method.getAnnotation(SearchResult.class);
+			ResultMapping mappings[] = searchResult.mappings();
+
+			//if mappings are specified fetch field details from bean fields
+			if(mappings == null || mappings.length == 0)
+			{
+				fetchResultFieldsFromObject(returnType);
+			}
+			//if mappings are specified, add specified mappings to query-builder
+			else
+			{
+				try
+				{
+					PropertyDescriptor propertyDescriptor = null;
+					Object returnSampleBean = this.returnType.newInstance();
+					
+					for(ResultMapping mapping : mappings)
+					{
+						propertyDescriptor = PropertyUtils.getPropertyDescriptor(returnSampleBean, mapping.property());
+						conditionQueryBuilder.addResultField(mapping.property(), propertyDescriptor.getPropertyType(), mapping.entityField(), methodDesc);
+					}
+				}catch(Exception ex)
+				{
+					throw new InvalidMappingException("An error occurred while parsing @SearchResult mappings of " + methodDesc, ex);
+				}
+			}
+		}
 		else
 		{
 			throw new UnsupportedOperationException("Failed to determine return details of finder method: " + method.getName());
-		}
-	}
-	
-	private Object parseRecord(Record record, ConversionService conversionService)
-	{
-		logger.trace("Started method: parseRecord");
-		
-		if(!isReturnTypeEntity)
-		{
-			return conversionService.convertToJavaType(record.getObject(0), returnColumnToField.get(record.getColumn(0)));
-		}
-		
-		try
-		{
-			Object result = returnType.newInstance();
-			FieldDetails fieldDetails = null;
-			Object value = null;
-			
-			for(String column: returnColumnToField.keySet())
-			{
-				fieldDetails = returnColumnToField.get(column);
-				
-				value = record.getObject(column);
-				value = conversionService.convertToJavaType(value, fieldDetails);
-			
-				if(value == null)
-				{
-					continue;
-				}
-				
-				fieldDetails.getField().set(result, value);
-			}
-			
-			return result;
-		}catch(Exception ex)
-		{
-			throw new PersistenceException("An error occurred while building result record of type: " + returnType.getName(), ex);
 		}
 	}
 	
@@ -222,16 +240,15 @@ public class FinderQueryExecutor extends QueryExecutor
 		
 		try
 		{
-			Object value = null;
+			FinderQuery finderQuery = new FinderQuery(entityDetails);
+
+			//set the result fields, conditions and tables details on finder query
+			conditionQueryBuilder.loadConditionalQuery(finderQuery, params);
 			
-			for(ConditionParam condition: query.getConditions())
-			{
-				value = conversionService.convertToDBType(params[condition.getIndex()], null);
-				condition.setValue(value);
-			}
+			//execute the query and fetch records
+			List<Record> records = dataStore.executeFinder(finderQuery, entityDetails);
 			
-			List<Record> records = dataStore.executeFinder(query, entityDetails);
-			
+			//if no results found
 			if(records == null || records.isEmpty())
 			{
 				//if primitive return type is expected simply return default value
@@ -242,7 +259,8 @@ public class FinderQueryExecutor extends QueryExecutor
 				
 				return Collections.emptyList();
 			}
-			
+
+			//if single element is expected as result
 			if(collectionReturnType == null)
 			{
 				if(records.size() > 1)
@@ -250,9 +268,12 @@ public class FinderQueryExecutor extends QueryExecutor
 					throw new RecordCountMistmatchException("Multiple records found when single record is expected.");
 				}
 				
-				return parseRecord(records.get(0), conversionService);
+				ArrayList<Object> resLst = new ArrayList<>();
+				conditionQueryBuilder.parseResults(Arrays.asList(records.get(0)), (Class)returnType, resLst, conversionService, persistenceExecutionContext);
+				return resLst.get(0);
 			}
-			
+	
+			//if collection of objects are expected as result
 			Collection<Object> lst = null;
 			
 			try
@@ -263,10 +284,8 @@ public class FinderQueryExecutor extends QueryExecutor
 				throw new IllegalStateException("An error occurred while creating return collection: " + collectionReturnType.getName(), ex);
 			}
 			
-			for(Record record: records)
-			{
-				lst.add(parseRecord(record, conversionService));
-			}
+			//parse records into required types
+			conditionQueryBuilder.parseResults(records, (Class)returnType, lst, conversionService, persistenceExecutionContext);
 			
 			return lst;
 		}finally

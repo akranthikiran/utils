@@ -24,7 +24,7 @@ public abstract class Query
 		return entityDetails.getTableName();
 	}
 
-	public static void toString(List<ConditionParam> conditions, StringBuilder builder)
+	public static void toString(List<QueryCondition> conditions, StringBuilder builder)
 	{
 		if(conditions == null || conditions.isEmpty())
 		{
@@ -32,7 +32,7 @@ public abstract class Query
 			return;
 		}
 		
-		Iterator<ConditionParam> it = conditions.iterator();
+		Iterator<QueryCondition> it = conditions.iterator();
 		
 		builder.append("{");
 		

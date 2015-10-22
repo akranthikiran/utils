@@ -18,7 +18,7 @@ import com.fw.persistence.ITransaction;
 import com.fw.persistence.PersistenceException;
 import com.fw.persistence.conversion.ConversionService;
 import com.fw.persistence.query.ChildrenExistenceQuery;
-import com.fw.persistence.query.ConditionParam;
+import com.fw.persistence.query.QueryCondition;
 import com.fw.persistence.query.DeleteQuery;
 import com.fw.persistence.query.FetchChildrenIdsQuery;
 import com.fw.persistence.query.IChildQuery;
@@ -35,30 +35,31 @@ public class DeleteQueryExecutor extends AbstractPersistQueryExecutor
 	private static Logger logger = LogManager.getLogger(DeleteQueryExecutor.class);
 	
 	private Class<?> returnType;
-	private DeleteQuery deleteQuery;
 	private ReentrantLock queryLock = new ReentrantLock();
+	private ConditionQueryBuilder conditionQueryBuilder;
+	private String methodDesc;
+	
 	
 	public DeleteQueryExecutor(Class<?> repositoryType, Method method, EntityDetails entityDetails)
 	{
 		super.entityDetails = entityDetails;
 		super.repositoryType = repositoryType;
 		
-		deleteQuery = new DeleteQuery(entityDetails);
+		conditionQueryBuilder = new ConditionQueryBuilder(entityDetails);
+		methodDesc = String.format("delete method '%s' of repository - '%s'", method.getName(), repositoryType.getName());
 		
-		if(!super.fetchConditonsByAnnotations(method, deleteQuery, false))
-		{
-			super.fetchConditionsByName(method, deleteQuery, "delete");
-		}
+		super.fetchConditonsByAnnotations(method, true, conditionQueryBuilder, methodDesc);
+		super.fetchConditionsByName(method, conditionQueryBuilder, methodDesc);
 		
 		returnType = method.getReturnType();
 		
 		if(!boolean.class.equals(returnType) && !void.class.equals(returnType) && !int.class.equals(returnType))
 		{
-			throw new InvalidRepositoryException("Update method '" + method.getName() + "' found with non-boolean, non-void and non-int return type in repository: " + repositoryType.getName());
+			throw new InvalidRepositoryException("Delete method '" + method.getName() + "' found with non-boolean, non-void and non-int return type in repository: " + repositoryType.getName());
 		}
 	}
 	
-	private void populateChildQuery(ForeignConstraintDetails childConstraint, IChildQuery childQuery, 
+	private void populateChildQuery(ForeignConstraintDetails childConstraint, DeleteQuery deleteQuery, IChildQuery childQuery, 
 			IDataStore dataStore, ConversionService conversionService, Object... params)
 	{
 		logger.trace("Started method: populateChildQuery");
@@ -66,9 +67,9 @@ public class DeleteQueryExecutor extends AbstractPersistQueryExecutor
 		//add conditions from main delete query as parent conditions
 		if(deleteQuery.getConditions() != null)
 		{
-			for(ConditionParam condition: deleteQuery.getConditions())
+			for(QueryCondition condition: deleteQuery.getConditions())
 			{
-				childQuery.addParentCondition(new ConditionParam(condition.getColumn(), params[condition.getIndex()], -1));
+				childQuery.addParentCondition(condition.clone());
 			}
 		}
 		
@@ -88,7 +89,7 @@ public class DeleteQueryExecutor extends AbstractPersistQueryExecutor
 	 * @param conversionService
 	 * @param params
 	 */
-	private void processChildConstraints(IDataStore dataStore, ConversionService conversionService, Object... params)
+	private void processChildConstraints(IDataStore dataStore, DeleteQuery deleteQuery, ConversionService conversionService, Object... params)
 	{
 		logger.trace("Started method: processChildConstraints");
 		
@@ -112,7 +113,7 @@ public class DeleteQueryExecutor extends AbstractPersistQueryExecutor
 				//fetch child entity ids referring to current entity
 				//  This is needed to perform delete recursively
 				FetchChildrenIdsQuery fetchChildrenIdsQuery = new FetchChildrenIdsQuery(childConstraint.getOwnerEntityDetails(), entityDetails);
-				populateChildQuery(childConstraint, fetchChildrenIdsQuery, dataStore, conversionService, params);
+				populateChildQuery(childConstraint, deleteQuery, fetchChildrenIdsQuery, dataStore, conversionService, params);
 				
 				List<Object> childrenIds = dataStore.fetchChildrenIds(fetchChildrenIdsQuery);
 				
@@ -134,7 +135,7 @@ public class DeleteQueryExecutor extends AbstractPersistQueryExecutor
 				//check if any child entities are referring to current entity
 				childrenExistenceQuery = new ChildrenExistenceQuery(childConstraint.getOwnerEntityDetails(), entityDetails);
 				
-				populateChildQuery(childConstraint, childrenExistenceQuery, dataStore, conversionService, params);
+				populateChildQuery(childConstraint, deleteQuery, childrenExistenceQuery, dataStore, conversionService, params);
 				
 				if(dataStore.checkChildrenExistence(childrenExistenceQuery) > 0)
 				{
@@ -154,23 +155,13 @@ public class DeleteQueryExecutor extends AbstractPersistQueryExecutor
 		
 		try(ITransaction transaction = dataStore.getTransactionManager().newOrExistingTransaction())
 		{
-			if(deleteQuery.getConditions() != null)
-			{
-				Object value = null;
-				
-				for(ConditionParam condition: deleteQuery.getConditions())
-				{
-					value = params[condition.getIndex()];
-					value = conversionService.convertToDBType(value, null);
-					
-					condition.setValue(value);
-				}
-			}
+			DeleteQuery deleteQuery = new DeleteQuery(entityDetails);
+			conditionQueryBuilder.loadConditionalQuery(deleteQuery, params);
 			
 			//if datastore requires explicit child delete handling (like NOSQL DBs)
 			if(dataStore.isExplicitForeignCheckRequired())
 			{
-				processChildConstraints(dataStore, conversionService, params);
+				processChildConstraints(dataStore, deleteQuery, conversionService, params);
 			}
 
 			int res = dataStore.delete(deleteQuery, entityDetails);

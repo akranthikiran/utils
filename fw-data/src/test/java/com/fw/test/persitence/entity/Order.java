@@ -19,6 +19,9 @@ public class Order
 	private long id;
 
 	@Column
+	private String title;
+	
+	@Column
 	private int orderNo;
 	
 	@ManyToOne
@@ -28,11 +31,31 @@ public class Order
 	@OneToMany(mappedBy = "order", cascade = {CascadeType.PERSIST})
 	private List<OrderItem> items;
 	
-	public Order(int orderNo, Customer customer, List<OrderItem> items)
+	public Order()
+	{}
+	
+	public Order(String title, int orderNo, Customer customer, List<OrderItem> items)
 	{
+		this.title = title;
 		this.orderNo = orderNo;
 		this.customer = customer;
 		this.items = items;
+	}
+	
+	/**
+	 * @return the {@link #title title}
+	 */
+	public String getTitle()
+	{
+		return title;
+	}
+
+	/**
+	 * @param title the {@link #title title} to set
+	 */
+	public void setTitle(String title)
+	{
+		this.title = title;
 	}
 
 	/**

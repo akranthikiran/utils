@@ -13,6 +13,9 @@ public class OrderItem
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private long id;
+	
+	@Column
+	private String itemName;
 
 	@Column
 	private int quantity;
@@ -21,10 +24,30 @@ public class OrderItem
 	@Column(name = "ORDER_ID")
 	private Order order;
 
-	public OrderItem(int quantity, Order order)
+	public OrderItem()
+	{}
+	
+	public OrderItem(String itemName, int quantity, Order order)
 	{
+		this.itemName = itemName;
 		this.quantity = quantity;
 		this.order = order;
+	}
+	
+	/**
+	 * @return the {@link #itemName itemName}
+	 */
+	public String getItemName()
+	{
+		return itemName;
+	}
+
+	/**
+	 * @param itemName the {@link #itemName itemName} to set
+	 */
+	public void setItemName(String itemName)
+	{
+		this.itemName = itemName;
 	}
 
 	/**

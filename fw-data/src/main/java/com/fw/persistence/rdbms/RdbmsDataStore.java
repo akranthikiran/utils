@@ -36,7 +36,7 @@ import com.fw.persistence.UnsupportedOperationException;
 import com.fw.persistence.conversion.ConversionService;
 import com.fw.persistence.query.ChildrenExistenceQuery;
 import com.fw.persistence.query.ColumnParam;
-import com.fw.persistence.query.ConditionParam;
+import com.fw.persistence.query.QueryCondition;
 import com.fw.persistence.query.CountQuery;
 import com.fw.persistence.query.CreateIndexQuery;
 import com.fw.persistence.query.CreateTableQuery;
@@ -273,7 +273,7 @@ public class RdbmsDataStore implements IDataStore
 	{
 		logger.trace("Started method: getCount");
 		
-		List<ConditionParam> conditions = countQuery.getConditions();
+		List<QueryCondition> conditions = countQuery.getConditions();
 		
 		/*
 		if(conditions == null || conditions.isEmpty())
@@ -300,7 +300,7 @@ public class RdbmsDataStore implements IDataStore
 			
 			if(conditions != null)
 			{
-				for(ConditionParam condition: conditions)
+				for(QueryCondition condition: conditions)
 				{
 					pstmt.setObject(index, condition.getValue());
 					params.add(condition.getValue());
@@ -359,7 +359,7 @@ public class RdbmsDataStore implements IDataStore
 			
 			if(childrenExistenceQuery.getParentConditions() != null)
 			{
-				for(ConditionParam condition: childrenExistenceQuery.getParentConditions())
+				for(QueryCondition condition: childrenExistenceQuery.getParentConditions())
 				{
 					pstmt.setObject(index, condition.getValue());
 					params.add(condition.getValue());
@@ -370,7 +370,7 @@ public class RdbmsDataStore implements IDataStore
 
 			if(childrenExistenceQuery.getChildConditions() != null)
 			{
-				for(ConditionParam condition: childrenExistenceQuery.getChildConditions())
+				for(QueryCondition condition: childrenExistenceQuery.getChildConditions())
 				{
 					pstmt.setObject(index, condition.getValue());
 					params.add(condition.getValue());
@@ -428,7 +428,7 @@ public class RdbmsDataStore implements IDataStore
 			
 			if(fetchChildrenIdsQuery.getParentConditions() != null)
 			{
-				for(ConditionParam condition: fetchChildrenIdsQuery.getParentConditions())
+				for(QueryCondition condition: fetchChildrenIdsQuery.getParentConditions())
 				{
 					pstmt.setObject(index, condition.getValue());
 					params.add(condition.getValue());
@@ -439,7 +439,7 @@ public class RdbmsDataStore implements IDataStore
 
 			if(fetchChildrenIdsQuery.getChildConditions() != null)
 			{
-				for(ConditionParam condition: fetchChildrenIdsQuery.getChildConditions())
+				for(QueryCondition condition: fetchChildrenIdsQuery.getChildConditions())
 				{
 					pstmt.setObject(index, condition.getValue());
 					params.add(condition.getValue());
@@ -572,7 +572,7 @@ public class RdbmsDataStore implements IDataStore
 				index++;
 			}
 			
-			for(ConditionParam condition: updateQuery.getConditions())
+			for(QueryCondition condition: updateQuery.getConditions())
 			{
 				pstmt.setObject(index, condition.getValue());
 				params.add(condition.getValue());
@@ -620,7 +620,7 @@ public class RdbmsDataStore implements IDataStore
 			int index = 1;
 			List<Object> params = new ArrayList<>();
 			
-			for(ConditionParam condition: deleteQuery.getConditions())
+			for(QueryCondition condition: deleteQuery.getConditions())
 			{
 				pstmt.setObject(index, condition.getValue());
 				params.add(condition.getValue());
@@ -830,7 +830,7 @@ public class RdbmsDataStore implements IDataStore
 			pstmt = connection.prepareStatement(query);
 			int index = 1;
 			
-			for(ConditionParam condition: findQuery.getConditions())
+			for(QueryCondition condition: findQuery.getConditions())
 			{
 				pstmt.setObject(index, condition.getValue());
 				params.add(condition.getValue());

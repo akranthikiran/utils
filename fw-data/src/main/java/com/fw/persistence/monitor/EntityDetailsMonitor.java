@@ -108,4 +108,14 @@ public class EntityDetailsMonitor
 			listeners.add(listener);
 		}
 	}
+	
+	/**
+	 * Called when an entity is removed
+	 * @param entityType
+	 */
+	public synchronized void entityRemoved(Class<?> entityType)
+	{
+		this.entityWithTables.remove(entityType);
+		this.createTableListeners.remove(entityType);
+	}
 }

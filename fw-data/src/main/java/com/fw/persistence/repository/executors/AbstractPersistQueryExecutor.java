@@ -16,7 +16,7 @@ import com.fw.persistence.Operator;
 import com.fw.persistence.UniqueConstraintDetails;
 import com.fw.persistence.UniqueConstraintViolationException;
 import com.fw.persistence.conversion.ConversionService;
-import com.fw.persistence.query.ConditionParam;
+import com.fw.persistence.query.QueryCondition;
 import com.fw.persistence.query.CountQuery;
 
 public abstract class AbstractPersistQueryExecutor extends QueryExecutor
@@ -51,7 +51,7 @@ public abstract class AbstractPersistQueryExecutor extends QueryExecutor
 				continue;
 			}
 			
-			existenceQuery.reset();
+			existenceQuery.clearConditions();
 			fieldValues.clear();
 			
 			for(String field: uniqueConstraint.getFields())
@@ -61,13 +61,13 @@ public abstract class AbstractPersistQueryExecutor extends QueryExecutor
 				value = fieldDetails.getValue(entity);
 				value = conversionService.convertToDBType(value, fieldDetails);
 				
-				existenceQuery.addCondition(new ConditionParam(fieldDetails.getColumn(), value, -1));
+				existenceQuery.addCondition(new QueryCondition(null, fieldDetails.getColumn(), Operator.EQ, value));
 				fieldValues.put(field, value);
 			}
 			
 			if(excludeId)
 			{
-				existenceQuery.addCondition(new ConditionParam(entityDetails.getIdField().getColumn(), Operator.NE, entityDetails.getIdField().getValue(entity), -1));
+				existenceQuery.addCondition(new QueryCondition(null, entityDetails.getIdField().getColumn(), Operator.NE, entityDetails.getIdField().getValue(entity)));
 			}
 			
 			if(dataStore.getCount(existenceQuery, entityDetails) > 0)
@@ -121,7 +121,7 @@ public abstract class AbstractPersistQueryExecutor extends QueryExecutor
 				continue;
 			}
 			
-			existenceQuery.addCondition(new ConditionParam(foreignEntityDetails.getIdField().getColumn(), value, -1));
+			existenceQuery.addCondition(new QueryCondition(null, foreignEntityDetails.getIdField().getColumn(), Operator.EQ, value));
 			
 			if(dataStore.getCount(existenceQuery, foreignEntityDetails) <= 0)
 			{

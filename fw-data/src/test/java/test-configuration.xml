@@ -9,6 +9,7 @@
 		</dataStore>
 	</repositoryFactory>
 
+	<!--  
 	<repositoryFactory createTables="true">
 		<dataStore ccg:beanType="com.fw.persistence.rdbms.RdbmsDataStore" ccg:paramTypes="String" ccg:params="mysql">
 			<dataSource ccg:beanType="org.apache.commons.dbcp2.BasicDataSource">
@@ -19,6 +20,7 @@
 			</dataSource>
 		</dataStore>
 	</repositoryFactory>
+	-->
 </configuration>
 
 	

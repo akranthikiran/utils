@@ -29,6 +29,9 @@ public class Customer
 	@OneToMany(mappedBy = "customer", cascade = {CascadeType.PERSIST})
 	private List<Order> orders;
 
+	public Customer()
+	{}
+	
 	public Customer(String name, List<CustomerGroup> customerGroups, List<Order> orders)
 	{
 		this.name = name;

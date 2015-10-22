@@ -36,15 +36,18 @@ public class Employee
 	
 	private String phoneNo;
 	
+	private int age;
+	
 	public Employee()
 	{}
 	
-	public Employee(String employeeNo, String emailId, String name, String phoneNo)
+	public Employee(String employeeNo, String emailId, String name, String phoneNo, int age)
 	{
 		this.employeeNo = employeeNo;
 		this.emailId = emailId;
 		this.name = name;
 		this.phoneNo = phoneNo;
+		this.age = age;
 	}
 
 	public long getId()
@@ -96,4 +99,22 @@ public class Employee
 	{
 		this.phoneNo = phoneNo;
 	}
+
+	/**
+	 * @return the {@link #age age}
+	 */
+	public int getAge()
+	{
+		return age;
+	}
+
+	/**
+	 * @param age the {@link #age age} to set
+	 */
+	public void setAge(int age)
+	{
+		this.age = age;
+	}
+	
+	
 }

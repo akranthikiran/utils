@@ -21,10 +21,12 @@ import com.fw.persistence.IDataStore;
 import com.fw.persistence.ITransaction;
 import com.fw.persistence.JoinTableDetails;
 import com.fw.persistence.JoinTableEntity;
+import com.fw.persistence.Operator;
 import com.fw.persistence.Record;
 import com.fw.persistence.conversion.ConversionService;
 import com.fw.persistence.query.ColumnParam;
-import com.fw.persistence.query.ConditionParam;
+import com.fw.persistence.query.QueryCondition;
+import com.fw.persistence.query.QueryResultField;
 import com.fw.persistence.query.FinderQuery;
 import com.fw.persistence.query.SaveQuery;
 import com.fw.persistence.repository.InvalidRepositoryException;
@@ -354,9 +356,9 @@ public class SaveQueryExecutor extends AbstractPersistQueryExecutor
 		
 		//build finder query
 		FinderQuery findQuery = new FinderQuery(entityDetails);
-		findQuery.addColumn(idFieldDetails.getColumn());
+		findQuery.addResultField(new QueryResultField(null, idFieldDetails.getColumn(), null));
 		
-		findQuery.addCondition(new ConditionParam(COL_UQ_ENTITY_ID, uuid, -1));
+		findQuery.addCondition(new QueryCondition(null, COL_UQ_ENTITY_ID, Operator.EQ, uuid));
 		
 		//execute finder query 
 		List<Record> records = dataStore.executeFinder(findQuery, entityDetails);

@@ -12,9 +12,10 @@ import com.fw.persistence.FieldDetails;
 import com.fw.persistence.ICrudRepository;
 import com.fw.persistence.IDataStore;
 import com.fw.persistence.ITransaction;
+import com.fw.persistence.Operator;
 import com.fw.persistence.conversion.ConversionService;
 import com.fw.persistence.query.ColumnParam;
-import com.fw.persistence.query.ConditionParam;
+import com.fw.persistence.query.QueryCondition;
 import com.fw.persistence.query.UpdateQuery;
 import com.fw.persistence.repository.InvalidRepositoryException;
 import com.fw.persistence.repository.annotations.Field;
@@ -25,14 +26,21 @@ public class UpdateQueryExecutor extends AbstractPersistQueryExecutor
 	private static Logger logger = LogManager.getLogger(UpdateQueryExecutor.class);
 
 	private Class<?> returnType;
-	private UpdateQuery updateQuery;
 	private ReentrantLock queryLock = new ReentrantLock();
 	private boolean entityUpdate = false;
+	private ConditionQueryBuilder conditionQueryBuilder;
+	private String methodDesc;
+	
+	private UpdateQuery updateQuery;
 	
 	public UpdateQueryExecutor(Class<?> repositoryType, Method method, EntityDetails entityDetails)
 	{
 		super.entityDetails = entityDetails;
 		super.repositoryType = repositoryType;
+		
+		conditionQueryBuilder = new ConditionQueryBuilder(entityDetails);
+		methodDesc = String.format("update method '%s' of repository - '%s'", method.getName(), repositoryType.getName());
+		
 		
 		Class<?> paramTypes[] = method.getParameterTypes();
 
@@ -51,7 +59,7 @@ public class UpdateQueryExecutor extends AbstractPersistQueryExecutor
 		{
 			updateQuery = new UpdateQuery(entityDetails);
 			
-			if(!super.fetchConditonsByAnnotations(method, updateQuery, false))
+			if(!super.fetchConditonsByAnnotations(method, false, conditionQueryBuilder, methodDesc))
 			{
 				throw new InvalidRepositoryException("For non-entity update method '" + method.getName() + "' no conditions are specified, in repository: " + repositoryType.getName());
 			}
@@ -141,7 +149,7 @@ public class UpdateQueryExecutor extends AbstractPersistQueryExecutor
 			query.addColumn(new ColumnParam(field.getColumn(), value, -1));
 		}
 		
-		query.addCondition(new ConditionParam(entityDetails.getIdField().getColumn(), entityDetails.getIdField().getValue(entity), -1));
+		query.addCondition(new QueryCondition(null, entityDetails.getIdField().getColumn(), Operator.EQ, entityDetails.getIdField().getValue(entity)));
 		
 		int res = dataStore.update(query, entityDetails);
 		
@@ -171,11 +179,8 @@ public class UpdateQueryExecutor extends AbstractPersistQueryExecutor
 		{
 			Object value = null;
 			
-			for(ConditionParam condition: updateQuery.getConditions())
-			{
-				value = conversionService.convertToDBType(params[condition.getIndex()], entityDetails.getFieldDetailsByColumn(condition.getColumn()));
-				condition.setValue(value);
-			}
+			updateQuery.clearConditions();
+			conditionQueryBuilder.loadConditionalQuery(updateQuery, params);
 			
 			//TODO: When unique fields are getting updated, make sure unique constraints are not violated
 				//during unique field update might be we have to mandate id is provided as condition

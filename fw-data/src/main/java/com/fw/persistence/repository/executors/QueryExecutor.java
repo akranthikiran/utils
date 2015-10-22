@@ -14,12 +14,10 @@ import com.fw.persistence.ICrudRepository;
 import com.fw.persistence.IDataStore;
 import com.fw.persistence.Operator;
 import com.fw.persistence.conversion.ConversionService;
-import com.fw.persistence.query.ConditionParam;
-import com.fw.persistence.query.IConditionalQuery;
 import com.fw.persistence.repository.InvalidRepositoryException;
 import com.fw.persistence.repository.PersistenceExecutionContext;
 import com.fw.persistence.repository.annotations.Condition;
-import com.fw.persistence.repository.annotations.QueryObject;
+import com.fw.persistence.repository.annotations.ConditionBean;
 
 public abstract class QueryExecutor
 {
@@ -63,12 +61,14 @@ public abstract class QueryExecutor
 		return null;
 	}
 	
-	private void fetchConditionsFromObject(String methodName, Class<?> queryobjType, IConditionalQuery query, int index)
+	private boolean fetchConditionsFromObject(String methodName, Class<?> queryobjType,  
+			int index, ConditionQueryBuilder conditionQueryBuilder, String methodDesc)
 	{
-		Field fields[] = queryobjType.getFields();
+		Field fields[] = queryobjType.getDeclaredFields();
 		Condition condition = null;
 		FieldDetails fieldDetails = null;
 		String name = null;
+		boolean found = false;
 		
 		//loop through query object type fields 
 		for(Field field : fields)
@@ -101,11 +101,15 @@ public abstract class QueryExecutor
 							name, queryobjType.getName(), methodName, repositoryType.getName()));
 			}
 
-			query.addCondition(new ConditionParam(fieldDetails.getColumn(), condition.op(), null, index, true));
+			conditionQueryBuilder.addCondition(condition.op(), index, field.getName(), name, methodDesc);
+			found = true;
 		}
+		
+		return found;
 	}
 	
-	protected boolean fetchConditonsByAnnotations(Method method, IConditionalQuery query, boolean expectAllConditions)
+	protected boolean fetchConditonsByAnnotations(Method method, 
+			boolean expectAllConditions, ConditionQueryBuilder conditionQueryBuilder, String methodDesc)
 	{
 		logger.trace("Started method: fetchConditonsByAnnotations");
 		
@@ -117,10 +121,9 @@ public abstract class QueryExecutor
 			return false;
 		}
 
-		QueryObject queryObject = null;
+		ConditionBean conditionBean = null;
 		Condition condition = null;
 		boolean found = false;
-		FieldDetails fieldDetails = null;
 		String fieldName = null;
 		
 		//fetch conditions for each argument
@@ -132,12 +135,16 @@ public abstract class QueryExecutor
 			if(condition == null)
 			{
 				//check for query object annotation
-				queryObject = getAnnotation(paramAnnotations[i], QueryObject.class);
+				conditionBean = getAnnotation(paramAnnotations[i], ConditionBean.class);
 				
 				//if query object is found find nested conditions
-				if(queryObject != null)
+				if(conditionBean != null)
 				{
-					fetchConditionsFromObject(method.getName(), paramTypes[i], query, i);
+					if( fetchConditionsFromObject(method.getName(), paramTypes[i], i, conditionQueryBuilder, methodDesc) )
+					{
+						found = true;
+					}
+					
 					continue;
 				}
 				
@@ -148,7 +155,7 @@ public abstract class QueryExecutor
 				
 				if(found)
 				{
-					throw new InvalidRepositoryException("@Condition are not defined for all parameters of method '" 
+					throw new InvalidRepositoryException("@Condition/@ConditionBean is not defined for all parameters of method '" 
 								+ method.getName() + "' of repository: " + repositoryType.getName());
 				}
 				
@@ -163,22 +170,14 @@ public abstract class QueryExecutor
 						+ method.getName() + "' of repository: " + repositoryType.getName());
 			}
 			
-			fieldDetails = this.entityDetails.getFieldDetailsByField(condition.value());
-			
-			if(fieldDetails == null)
-			{
-				throw new InvalidRepositoryException("Invalid @Condition field '" + condition.value() + "' is specifie for finder method '" 
-						+ method.getName() + "' of repository: " + repositoryType.getName());
-			}
-			
-			query.addCondition(new ConditionParam(fieldDetails.getColumn(), condition.op(), null, i));
+			conditionQueryBuilder.addCondition(condition.op(), i, null, fieldName.trim(), methodDesc);
 			found = true;
 		}
 
 		return found;
 	}
 	
-	protected boolean fetchConditionsByName(Method method, IConditionalQuery query, String type)
+	protected boolean fetchConditionsByName(Method method, ConditionQueryBuilder conditionQueryBuilder, String methodDesc)
 	{
 		logger.trace("Started method: fetchConditionsByName");
 		
@@ -195,25 +194,16 @@ public abstract class QueryExecutor
 		
 		if(method.getParameterTypes().length != fieldNames.length)
 		{
-			throw new InvalidRepositoryException("Unable to find sufficient fields names from " + type + " method name '" 
-						+ method.getName() + "' of repository " + repositoryType.getName());
+			throw new InvalidRepositoryException("Unable to find sufficient fields names from " + methodDesc);
 		}
 		
-		FieldDetails fieldDetails = null;
 		int index = 0;
 		
 		for(String field: fieldNames)
 		{
 			field = StringUtil.toStartLower(field);
-			fieldDetails = entityDetails.getFieldDetailsByField(field);
 			
-			if(fieldDetails == null)
-			{
-				throw new InvalidRepositoryException("Invalid field name '" + field + "' extracted from " + type + " method name '" 
-							+ method.getName() + "' of repository " + repositoryType.getName());
-			}
-			
-			query.addCondition(new ConditionParam(fieldDetails.getColumn(), Operator.EQ, null, index));
+			conditionQueryBuilder.addCondition(Operator.EQ, index, null, field, methodDesc);
 			index++;
 		}
 		

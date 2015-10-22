@@ -12,7 +12,6 @@ import org.apache.logging.log4j.Logger;
 import com.fw.persistence.EntityDetails;
 import com.fw.persistence.IDataStore;
 import com.fw.persistence.conversion.ConversionService;
-import com.fw.persistence.query.ConditionParam;
 import com.fw.persistence.query.CountQuery;
 import com.fw.persistence.repository.InvalidRepositoryException;
 import com.fw.persistence.repository.annotations.CountFunction;
@@ -36,17 +35,21 @@ public class CountQueryExecutor extends QueryExecutor
 			Integer.class, int.class
 	));
 	
-	private CountQuery query;
 	private ReentrantLock queryLock = new ReentrantLock();
 	private Class<?> returnType;
+	private ConditionQueryBuilder conditionQueryBuilder;
+	private String methodDesc;
 	
 	public CountQueryExecutor(Class<?> repositoryType, Method method, EntityDetails entityDetails)
 	{
 		super.repositoryType = repositoryType;
-		this.query = new CountQuery(entityDetails);
 		super.entityDetails = entityDetails;
 		
-		fetchConditonsByAnnotations(method, query, true);
+		conditionQueryBuilder = new ConditionQueryBuilder(entityDetails);
+		this.methodDesc = String.format("count query '%s' of entity type - '%s'", method.getName(), repositoryType.getName());
+		
+		super.fetchConditonsByAnnotations(method, true, conditionQueryBuilder, methodDesc);
+		super.fetchConditionsByName(method, conditionQueryBuilder, methodDesc);
 		
 		this.returnType = method.getReturnType();
 		
@@ -69,14 +72,10 @@ public class CountQueryExecutor extends QueryExecutor
 		
 		try
 		{
-			Object value = null;
+			CountQuery query = new CountQuery(entityDetails);
 			
 			//set condition values on query
-			for(ConditionParam condition: query.getConditions())
-			{
-				value = conversionService.convertToDBType(params[condition.getIndex()], null);
-				condition.setValue(value);
-			}
+			conditionQueryBuilder.loadConditionalQuery(query, params);
 			
 			//execute the query and fetch result count
 			long count = dataStore.getCount(query, entityDetails);
@@ -89,7 +88,6 @@ public class CountQueryExecutor extends QueryExecutor
 			
 			//convert the count to required return type
 			return ConvertUtils.convert(count, returnType);
-			
 		}finally
 		{
 			queryLock.unlock();

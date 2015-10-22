@@ -23,6 +23,9 @@ public class CustomerGroup
 	@ManyToMany(mappedBy = "customerGroups")
 	private List<Customer> customers;
 
+	public CustomerGroup()
+	{}
+	
 	public CustomerGroup(String name, List<Customer> customers)
 	{
 		this.name = name;

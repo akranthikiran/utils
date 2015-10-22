@@ -600,6 +600,7 @@ public class EntityDetailsFactory
 	public void removeEntityDetails(Class<?> entityType)
 	{
 		typeToDetails.remove(entityType);
+		entityDetailsMonitor.entityRemoved(entityType);
 	}
 	
 }

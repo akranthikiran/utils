@@ -56,17 +56,17 @@ public class TForeignConstraints extends TestSuiteBase
 		genericRepository.save(group2);
 		genericRepository.save(group3);
 		
-		OrderItem item11 = new OrderItem(10, null);
-		OrderItem item12 = new OrderItem(20, null);
+		OrderItem item11 = new OrderItem("soap", 10, null);
+		OrderItem item12 = new OrderItem("box", 20, null);
 		
-		OrderItem item21 = new OrderItem(10, null);
-		OrderItem item22 = new OrderItem(3, null);
+		OrderItem item21 = new OrderItem("soap", 10, null);
+		OrderItem item22 = new OrderItem("brush", 3, null);
 		
-		OrderItem item31 = new OrderItem(20, null);
+		OrderItem item31 = new OrderItem("book", 20, null);
 		
-		Order order1 = new Order(10, null, Arrays.asList(item11, item12));
-		Order order2 = new Order(10, null, Arrays.asList(item21, item22));
-		Order order3 = new Order(10, null, Arrays.asList(item31));
+		Order order1 = new Order("order1", 10, null, Arrays.asList(item11, item12));
+		Order order2 = new Order("order2", 10, null, Arrays.asList(item21, item22));
+		Order order3 = new Order("order3", 10, null, Arrays.asList(item31));
 		
 		
 		Customer customer1 = new Customer("Customer1", Arrays.asList(group1, group3), Arrays.asList(order1, order2));

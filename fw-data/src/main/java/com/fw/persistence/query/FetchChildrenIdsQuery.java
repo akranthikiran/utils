@@ -7,8 +7,8 @@ import com.fw.persistence.EntityDetails;
 
 public class FetchChildrenIdsQuery extends Query implements IChildQuery
 {
-	private List<ConditionParam> childConditions = new ArrayList<>();
-	private List<ConditionParam> parentConditions = new ArrayList<>();
+	private List<QueryCondition> childConditions = new ArrayList<>();
+	private List<QueryCondition> parentConditions = new ArrayList<>();
 
 	private EntityDetails childEntityDetails;
 	private EntityDetails parentEntityDetails;
@@ -44,17 +44,17 @@ public class FetchChildrenIdsQuery extends Query implements IChildQuery
 	 *
 	 * @param condition condition to be added
 	 */
-	public void addChildCondition(ConditionParam condition)
+	public void addChildCondition(QueryCondition condition)
 	{
 		if(childConditions == null)
 		{
-			childConditions = new ArrayList<ConditionParam>();
+			childConditions = new ArrayList<QueryCondition>();
 		}
 
 		childConditions.add(condition);
 	}
 
-	public List<ConditionParam> getChildConditions()
+	public List<QueryCondition> getChildConditions()
 	{
 		return childConditions;
 	}
@@ -64,17 +64,17 @@ public class FetchChildrenIdsQuery extends Query implements IChildQuery
 	 *
 	 * @param condition condition to be added
 	 */
-	public void addParentCondition(ConditionParam condition)
+	public void addParentCondition(QueryCondition condition)
 	{
 		if(parentConditions == null)
 		{
-			parentConditions = new ArrayList<ConditionParam>();
+			parentConditions = new ArrayList<QueryCondition>();
 		}
 
 		parentConditions.add(condition);
 	}
 
-	public List<ConditionParam> getParentConditions()
+	public List<QueryCondition> getParentConditions()
 	{
 		return parentConditions;
 	}
