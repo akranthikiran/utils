@@ -169,37 +169,6 @@ public class TCrudFunctionality extends TestSuiteBase
 	}
 	
 	/**
-	 * Tests save or update functionality
-	 * @param factory
-	 */
-	@Test(dataProvider = "repositoryFactories")
-	public void testSaveOrUpdate(RepositoryFactory factory)
-	{
-		try
-		{
-			IEmployeeRepository empRepository = factory.getRepository(IEmployeeRepository.class);
-			
-			Employee emp = new Employee("12345", "kranthi@kk.com", "kranthi", "90232333", 28);
-			boolean res = empRepository.saveOrUpdate(emp);
-			
-			Assert.assertTrue(res, "Entity was not saved");
-			Assert.assertTrue(emp.getId() > 0, "Id is not set for saved entity");
-			
-			Employee empForUpdate = new Employee("12345", "kranthi1@kk.com", "kranthi", "902909090", 28);
-			res = empRepository.saveOrUpdate(empForUpdate);
-			
-			Assert.assertTrue(res, "Entity was not saved");
-			Assert.assertEquals(emp.getId(), empForUpdate.getId());
-		}catch(UnsupportedOperationException ex)
-		{
-			logger.info("Save-update operation is unssupported by current data-store");
-		}
-		
-		//cleanup the emp table
-		factory.dropRepository(Employee.class);
-	}
-	
-	/**
 	 * Tests Delete functionality
 	 * @param factory
 	 */

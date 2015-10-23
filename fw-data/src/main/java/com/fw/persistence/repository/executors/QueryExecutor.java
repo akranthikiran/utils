@@ -62,7 +62,7 @@ public abstract class QueryExecutor
 	}
 	
 	private boolean fetchConditionsFromObject(String methodName, Class<?> queryobjType,  
-			int index, ConditionQueryBuilder conditionQueryBuilder, String methodDesc)
+			int index, ConditionQueryBuilder conditionQueryBuilder, String methodDesc, boolean allowNested)
 	{
 		Field fields[] = queryobjType.getDeclaredFields();
 		Condition condition = null;
@@ -91,6 +91,11 @@ public abstract class QueryExecutor
 				name = field.getName();
 			}
 			
+			if(!allowNested && name.contains("."))
+			{
+				throw new InvalidRepositoryException(String.format("Nested expression '%1s' when plain properties are expected in %2s", name, methodDesc));
+			}
+
 			//fetch corresponding field details
 			fieldDetails = this.entityDetails.getFieldDetailsByField(name);
 			
@@ -100,7 +105,7 @@ public abstract class QueryExecutor
 						"Invalid @Condition field '%s'[%s] is specified for finder method '%s' of repository: %s", 
 							name, queryobjType.getName(), methodName, repositoryType.getName()));
 			}
-
+			
 			conditionQueryBuilder.addCondition(condition.op(), index, field.getName(), name, methodDesc);
 			found = true;
 		}
@@ -109,7 +114,7 @@ public abstract class QueryExecutor
 	}
 	
 	protected boolean fetchConditonsByAnnotations(Method method, 
-			boolean expectAllConditions, ConditionQueryBuilder conditionQueryBuilder, String methodDesc)
+			boolean expectAllConditions, ConditionQueryBuilder conditionQueryBuilder, String methodDesc, boolean allowNested)
 	{
 		logger.trace("Started method: fetchConditonsByAnnotations");
 		
@@ -140,7 +145,7 @@ public abstract class QueryExecutor
 				//if query object is found find nested conditions
 				if(conditionBean != null)
 				{
-					if( fetchConditionsFromObject(method.getName(), paramTypes[i], i, conditionQueryBuilder, methodDesc) )
+					if( fetchConditionsFromObject(method.getName(), paramTypes[i], i, conditionQueryBuilder, methodDesc, allowNested) )
 					{
 						found = true;
 					}
@@ -168,6 +173,11 @@ public abstract class QueryExecutor
 			{
 				throw new InvalidRepositoryException("No name is specified in @Condition parameter of method '" 
 						+ method.getName() + "' of repository: " + repositoryType.getName());
+			}
+			
+			if(!allowNested && fieldName.contains("."))
+			{
+				throw new InvalidRepositoryException(String.format("Nested expression '%1s' when plain properties are expected in %2s", fieldName, methodDesc));
 			}
 			
 			conditionQueryBuilder.addCondition(condition.op(), i, null, fieldName.trim(), methodDesc);

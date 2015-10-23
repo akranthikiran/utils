@@ -18,8 +18,6 @@ public interface ICrudRepository<E>
 
 	public boolean update(E entity);
 	
-	public boolean saveOrUpdate(E entity);
-	
 	public boolean deleteById(Object key);
 	
 	public E findById(Object key);

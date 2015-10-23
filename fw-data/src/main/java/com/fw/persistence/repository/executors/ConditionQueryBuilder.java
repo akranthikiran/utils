@@ -436,7 +436,7 @@ public class ConditionQueryBuilder
 			//if the field mapping is wrong
 			if(condition.fieldDetails == null)
 			{
-				throw new InvalidMappingException( String.format("Invalid field mapping '%1' found in condition parameter '%2' of '%3'", 
+				throw new InvalidMappingException( String.format("Invalid field mapping '%1s' found in condition parameter '%2s' of %3s", 
 							entityFieldExpression, condition.getConditionExpression(), methodDesc) );
 			}
 			

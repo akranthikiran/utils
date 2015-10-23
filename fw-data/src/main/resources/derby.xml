@@ -154,7 +154,7 @@
 		WHERE 1 = 1
 		<#list query.joinConditions as joinCondition>AND ${joinCondition.leftTableCode}.${joinCondition.leftColumn} = ${joinCondition.rightTableCode}.${joinCondition.rightColumn}
 		</#list>
-		<#list query.conditions as condition>AND <#if condition.tableCode??>${condition.tableCode}</#if>${condition.column} ${condition.operator} ?
+		<#list query.conditions as condition>AND <#if condition.tableCode??>${condition.tableCode}.</#if>${condition.column} ${condition.operator} ?
 		</#list>
 	]]></template>	
 

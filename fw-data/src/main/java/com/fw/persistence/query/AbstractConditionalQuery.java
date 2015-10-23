@@ -22,7 +22,7 @@ public abstract class AbstractConditionalQuery extends Query implements IConditi
 	/**
 	 * Holds query conditions
 	 */
-	private List<QueryCondition> conditions;
+	private List<QueryCondition> conditions = new ArrayList<>();
 	
 	/**
 	 * Holds query join conditions

@@ -59,7 +59,7 @@ public class UpdateQueryExecutor extends AbstractPersistQueryExecutor
 		{
 			updateQuery = new UpdateQuery(entityDetails);
 			
-			if(!super.fetchConditonsByAnnotations(method, false, conditionQueryBuilder, methodDesc))
+			if(!super.fetchConditonsByAnnotations(method, false, conditionQueryBuilder, methodDesc, false))
 			{
 				throw new InvalidRepositoryException("For non-entity update method '" + method.getName() + "' no conditions are specified, in repository: " + repositoryType.getName());
 			}
@@ -194,13 +194,13 @@ public class UpdateQueryExecutor extends AbstractPersistQueryExecutor
 			try(ITransaction transaction = dataStore.getTransactionManager().newOrExistingTransaction())
 			{
 				int res = dataStore.update(updateQuery, entityDetails);
+				transaction.commit();
 				
 				if(int.class.equals(returnType))
 				{
 					return res;
 				}
 				
-				transaction.commit();
 				return (boolean.class.equals(returnType)) ? (res > 0) : null;
 			}catch(Exception ex)
 			{

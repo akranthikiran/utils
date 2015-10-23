@@ -48,8 +48,12 @@ public class DeleteQueryExecutor extends AbstractPersistQueryExecutor
 		conditionQueryBuilder = new ConditionQueryBuilder(entityDetails);
 		methodDesc = String.format("delete method '%s' of repository - '%s'", method.getName(), repositoryType.getName());
 		
-		super.fetchConditonsByAnnotations(method, true, conditionQueryBuilder, methodDesc);
-		super.fetchConditionsByName(method, conditionQueryBuilder, methodDesc);
+		//try to find conditions based on annotations
+		if(!super.fetchConditonsByAnnotations(method, true, conditionQueryBuilder, methodDesc, false))
+		{
+			//if conditions are not found based on annotations, try to find based on method name
+			super.fetchConditionsByName(method, conditionQueryBuilder, methodDesc);
+		}
 		
 		returnType = method.getReturnType();
 		

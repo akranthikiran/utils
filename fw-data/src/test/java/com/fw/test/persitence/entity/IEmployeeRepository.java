@@ -6,6 +6,7 @@ import com.fw.persistence.ICrudRepository;
 import com.fw.persistence.Operator;
 import com.fw.persistence.repository.annotations.Condition;
 import com.fw.persistence.repository.annotations.ConditionBean;
+import com.fw.persistence.repository.annotations.CountFunction;
 import com.fw.persistence.repository.annotations.Field;
 import com.fw.persistence.repository.annotations.ResultMapping;
 import com.fw.persistence.repository.annotations.SearchResult;
@@ -19,6 +20,8 @@ public interface IEmployeeRepository extends ICrudRepository<Employee>
 	
 	@Field("id")
 	public long findIdByEmail(@Condition("emailId") String mail);
+	
+	public Employee findEmpByEmail(@Condition("emailId") String mail);
 	
 	@Field("age")
 	public int findAge(@Condition("name") String name, @Condition("phoneNo") String phoneNo);
@@ -41,6 +44,17 @@ public interface IEmployeeRepository extends ICrudRepository<Employee>
 		@ResultMapping(entityField = "age", property = "value")
 	})
 	public List<KeyValueBean> findKeyValues(@Condition(value = "phoneNo", op = Operator.LIKE) String phone);
+	
+	public int updateAge(@Condition("name") String name, @Field("age") int age);
+	
+	public boolean updatePhone(@Condition("emailId") String mail, @Field("phoneNo") String phoneNo);
+	
+	public boolean deleteByMailId(@Condition("emailId") String mail);
+	
+	public int deleteByUserName(@Condition("name") String name);
+	
+	@CountFunction
+	public long getCountByMailId(@Condition("emailId") String mail);
 
 	public void deleteAll();
 }

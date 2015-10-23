@@ -48,8 +48,12 @@ public class CountQueryExecutor extends QueryExecutor
 		conditionQueryBuilder = new ConditionQueryBuilder(entityDetails);
 		this.methodDesc = String.format("count query '%s' of entity type - '%s'", method.getName(), repositoryType.getName());
 		
-		super.fetchConditonsByAnnotations(method, true, conditionQueryBuilder, methodDesc);
-		super.fetchConditionsByName(method, conditionQueryBuilder, methodDesc);
+		//find conditions based on annotations
+		if(!super.fetchConditonsByAnnotations(method, true, conditionQueryBuilder, methodDesc, true))
+		{
+			//if based on annotations not found, check based on function name
+			super.fetchConditionsByName(method, conditionQueryBuilder, methodDesc);
+		}
 		
 		this.returnType = method.getReturnType();
 		

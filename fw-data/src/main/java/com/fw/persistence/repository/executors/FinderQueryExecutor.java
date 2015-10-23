@@ -68,7 +68,7 @@ public class FinderQueryExecutor extends QueryExecutor
 		
 		fetchReturnDetails(method);
 		
-		if(!fetchConditonsByAnnotations(method, true, conditionQueryBuilder, methodDesc) && 
+		if(!fetchConditonsByAnnotations(method, true, conditionQueryBuilder, methodDesc, true) && 
 				!fetchConditionsByName(method, conditionQueryBuilder, methodDesc))
 		{
 			throw new InvalidRepositoryException("Failed to determine parameter conditions for finder method '" 
