@@ -3,12 +3,14 @@ package com.fw.test.persitence;
 import java.util.List;
 
 import org.testng.Assert;
-import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
 
+import com.fw.persistence.Operator;
 import com.fw.persistence.RecordCountMistmatchException;
 import com.fw.persistence.repository.RepositoryFactory;
 import com.fw.persistence.repository.annotations.SearchResult;
+import com.fw.persistence.repository.search.SearchCondition;
+import com.fw.persistence.repository.search.SearchQuery;
 import com.fw.test.persitence.entity.Employee;
 import com.fw.test.persitence.entity.IEmployeeRepository;
 import com.fw.test.persitence.queries.EmpSearchQuery;
@@ -19,18 +21,9 @@ import com.fw.utils.CommonUtils;
 
 public class TFinders extends TestSuiteBase
 {
-	private RepositoryFactory factory;
-	private boolean initalized = false;
-	
-	private void init(RepositoryFactory factory)
+	@Override
+	protected void initFactoryBeforeClass(RepositoryFactory factory)
 	{
-		this.factory = factory;
-		
-		if(initalized)
-		{
-			return;
-		}
-		
 		IEmployeeRepository repo = factory.getRepository(IEmployeeRepository.class);
 		repo.save(new Employee("1230", "user0@test.com", "user1", "1234560", 20));
 		repo.save(new Employee("1231", "user1@test.com", "user2", "1234561", 25));
@@ -38,12 +31,10 @@ public class TFinders extends TestSuiteBase
 		repo.save(new Employee("1233", "user3@test.com", "user3", "1234563", 35));
 		repo.save(new Employee("1234", "user4@test.com", "user4", "1234564", 40));
 		repo.save(new Employee("1235", "user5@test.com", "user5", "12345644", 45));
-		
-		initalized = true;
 	}
-	
-	@AfterClass
-	public void cleanup()
+
+	@Override
+	protected void cleanFactoryAfterClass(RepositoryFactory factory)
 	{
 		//cleanup the emp table
 		factory.dropRepository(Employee.class);
@@ -55,8 +46,6 @@ public class TFinders extends TestSuiteBase
 	@Test(dataProvider = "repositoryFactories")
 	public void testFindByMethodName(RepositoryFactory factory)
 	{
-		init(factory);
-		
 		IEmployeeRepository repo = factory.getRepository(IEmployeeRepository.class);
 		Assert.assertEquals(repo.findEmailByEmployeeNo("1234"), "user4@test.com");
 	}
@@ -69,8 +58,6 @@ public class TFinders extends TestSuiteBase
 	@Test(dataProvider = "repositoryFactories")
 	public void testFindWithCondition(RepositoryFactory factory)
 	{
-		init(factory);
-		
 		IEmployeeRepository repo = factory.getRepository(IEmployeeRepository.class);
 		Assert.assertEquals(repo.findAge("user2", "1234562"), 30);
 	}
@@ -82,8 +69,6 @@ public class TFinders extends TestSuiteBase
 	@Test(dataProvider = "repositoryFactories")
 	public void testFindForEntity(RepositoryFactory factory)
 	{
-		init(factory);
-		
 		IEmployeeRepository repo = factory.getRepository(IEmployeeRepository.class);
 		
 		Employee e = repo.findByEmployeeNo("1234");
@@ -102,8 +87,6 @@ public class TFinders extends TestSuiteBase
 	@Test(dataProvider = "repositoryFactories")
 	public void testFindForEntityCollection(RepositoryFactory factory)
 	{
-		init(factory);
-		
 		IEmployeeRepository repo = factory.getRepository(IEmployeeRepository.class);
 		
 		List<Employee> empLst = repo.findByPhoneNo("%64%");
@@ -123,8 +106,6 @@ public class TFinders extends TestSuiteBase
 	@Test(dataProvider = "repositoryFactories")
 	public void testQueryByConditionBean(RepositoryFactory factory)
 	{
-		init(factory);
-		
 		IEmployeeRepository repo = factory.getRepository(IEmployeeRepository.class);
 		
 		List<Employee> empLst = repo.find(new EmpSearchQuery(null, "%64%", 5, 100));
@@ -156,8 +137,6 @@ public class TFinders extends TestSuiteBase
 	@Test(dataProvider = "repositoryFactories")
 	public void testFetchDiffBeanCollection(RepositoryFactory factory)
 	{
-		init(factory);
-		
 		IEmployeeRepository repo = factory.getRepository(IEmployeeRepository.class);
 		
 		List<EmpSearchResult> results = repo.findResultsByName("user2");
@@ -172,8 +151,6 @@ public class TFinders extends TestSuiteBase
 	@Test(dataProvider = "repositoryFactories", expectedExceptions = RecordCountMistmatchException.class)
 	public void testFetchDiffBean(RepositoryFactory factory)
 	{
-		init(factory);
-		
 		IEmployeeRepository repo = factory.getRepository(IEmployeeRepository.class);
 
 		EmpSearchResult res = repo.findResultByName("user2");
@@ -191,13 +168,32 @@ public class TFinders extends TestSuiteBase
 	@Test(dataProvider = "repositoryFactories")
 	public void testFinderWithMappings(RepositoryFactory factory)
 	{
-		init(factory);
-		
 		IEmployeeRepository repo = factory.getRepository(IEmployeeRepository.class);
 		
 		List<KeyValueBean> results = repo.findKeyValues("1234564%");
 		Assert.assertEquals(results.size(), 2);
 		Assert.assertEquals(CommonUtils.toSet(results.get(0).getKey(), results.get(1).getKey()) , CommonUtils.toSet("user4", "user5"));
 		Assert.assertEquals(CommonUtils.toSet(results.get(0).getValue(), results.get(1).getValue()) , CommonUtils.toSet("40", "45"));
+	}
+
+	@Test(dataProvider = "repositoryFactories")
+	public void testSearch(RepositoryFactory factory)
+	{
+		IEmployeeRepository repo = factory.getRepository(IEmployeeRepository.class);
+		
+		List<Employee> results = repo.search(new SearchQuery(
+				new SearchCondition("name", Operator.EQ, "user2")
+		));
+		
+		Assert.assertEquals(results.size(), 2);
+		Assert.assertEquals(CommonUtils.toSet(results.get(0).getEmployeeNo(), results.get(1).getEmployeeNo()) , CommonUtils.toSet("1231", "1232"));
+		
+		results = repo.search(new SearchQuery(
+				new SearchCondition("name", Operator.EQ, "user2"),
+				new SearchCondition("phoneNo", Operator.EQ, "1234561")
+		));
+		
+		Assert.assertEquals(results.size(), 1);
+		Assert.assertEquals(results.get(0).getEmployeeNo() , "1231");
 	}
 }

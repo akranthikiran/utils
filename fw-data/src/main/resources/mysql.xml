@@ -96,14 +96,6 @@
 		<#if condition_has_next>AND </#if></#list>
 	]]></template>	
 
-	<template name="saveUpdateTemplate"><![CDATA[
-		INSERT INTO ${query.tableName}(<#list query.insertColumns as column>${column.name}<#if column_has_next>,</#if></#list>)
-		VALUES (<#list query.insertColumns as column><#if column.sequenceGenerated>NULL<#else>?</#if><#if column_has_next>,</#if></#list>)
-		ON DUPLICATE KEY UPDATE
-		<#list query.updateColumns as column>${column.name} = ?<#if column_has_next>,
-		</#if></#list>
-	]]></template>	
-
 	<template name="deleteTemplate"><![CDATA[
 		DELETE FROM ${query.tableName}
 		WHERE 1 = 1
@@ -135,19 +127,25 @@
 	]]></template>	
 
 	<template name="finderTemplate"><![CDATA[
-		SELECT <#list query.columns as column>${column}<#if column_has_next>,</#if></#list>
-		FROM ${query.tableName}
+		SELECT <#list query.resultFields as column><@trim>
+				<#if column.tableCode??>${column.tableCode}.</#if>${column.column} <#if column.code??>${column.code}</#if><#if column_has_next>,</#if>
+			</@trim></#list>
+
+		FROM <#list query.tables as table>${table.table} <#if table.tableCode??>${table.tableCode}</#if><#if table_has_next>,</#if></#list>
 		WHERE 1 = 1
-		<#list query.conditions as condition>AND ${condition.column} ${condition.operator} ?
+		<#list query.joinConditions as joinCondition>AND ${joinCondition.leftTableCode}.${joinCondition.leftColumn} = ${joinCondition.rightTableCode}.${joinCondition.rightColumn}
+		</#list>
+		<#list query.conditions as condition>AND <#if condition.tableCode??>${condition.tableCode}.</#if>${condition.column} ${condition.operator} ?
 		</#list>
 	]]></template>	
 
 	<template name="countTemplate"><![CDATA[
 		SELECT COUNT(*)
-		FROM ${query.tableName}
+		FROM <#list query.tables as table>${table.table} <#if table.tableCode??>${table.tableCode}</#if><#if table_has_next>,</#if></#list>
 		WHERE 1 = 1
-		<#list query.conditions as condition>
-			AND ${condition.column} ${condition.operator} ?
+		<#list query.joinConditions as joinCondition>AND ${joinCondition.leftTableCode}.${joinCondition.leftColumn} = ${joinCondition.rightTableCode}.${joinCondition.rightColumn}
+		</#list>
+		<#list query.conditions as condition>AND <#if condition.tableCode??>${condition.tableCode}.</#if>${condition.column} ${condition.operator} ?
 		</#list>
 	]]></template>	
 

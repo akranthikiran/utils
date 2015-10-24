@@ -36,9 +36,10 @@ import com.fw.utils.ObjectWrapper;
  * 
  * @author akiran
  */
-public class ConditionQueryBuilder
+public class ConditionQueryBuilder implements Cloneable
 {
 	private static final String DEF_TABLE_CODE = "T0";
+	private static final String DEF_TABLE_ID_COL = "T0_ID";
 	
 	/**
 	 * Table information required by the query
@@ -426,6 +427,7 @@ public class ConditionQueryBuilder
 		//split the entity field expression
 		String entityFieldParts[] = entityFieldExpression.trim().split("\\s*\\.\\s*");
 
+//		nyn8 nti8uiijyujuiu
 		Condition condition = new Condition(operator, index, embeddedProperty, entityFieldExpression);
 		
 		//if this mapping is for direct property mapping
@@ -508,8 +510,12 @@ public class ConditionQueryBuilder
 		resultField.table = tableInfo;
 		resultField.fieldDetails = fieldDetailsHolder.getValue();
 
+		//TODO: If end field represents a collection, check if it can be supported, if not throw exception
+		//		Note - Reverse mapping property has to be created for such properies
+		
 		resultFields.add(resultField);
 
+		//if this direct return field
 		if(resultProperty == null)
 		{
 			isSingleFieldReturn = true;
@@ -569,6 +575,9 @@ public class ConditionQueryBuilder
 			query.addResultField(new QueryResultField(field.table.tableCode, field.fieldDetails.getColumn(), field.code));
 		}
 		
+		query.addResultField(new QueryResultField(DEF_TABLE_CODE, 
+				codeToTable.get(DEF_TABLE_CODE).entityDetails.getIdField().getColumn(), DEF_TABLE_ID_COL));
+
 		//load the conditions to the query
 		for(Condition condition : this.conditions)
 		{
@@ -592,6 +601,37 @@ public class ConditionQueryBuilder
 			query.addCondition(new QueryCondition(condition.table.tableCode, condition.fieldDetails.getColumn(), condition.operator, value));
 		}
 	}
+	
+	/**
+	 * Creates a collection of specified type
+	 * @param type
+	 * @return
+	 */
+	/*
+	@SuppressWarnings("unchecked")
+	private Collection<Object> createCollectionOfType(Class<?> type)
+	{
+		//if array list can be assigned to target field
+		if(type.isAssignableFrom(ArrayList.class))
+		{
+			return new ArrayList<>();
+		}
+		
+		//if hashset can be assigned to target field
+		if(type.isAssignableFrom(HashSet.class))
+		{
+			return new HashSet<>();
+		}
+		
+		try
+		{
+			return (Collection<Object>) type.newInstance();
+		}catch(Exception ex)
+		{
+			throw new IllegalStateException("Unable to create collection of type - " + type.getName(), ex);
+		}
+	}
+	*/
 	
 	/**
 	 * Parses and converts specified record into specified result type
@@ -635,8 +675,6 @@ public class ConditionQueryBuilder
 				foreignConstraint = resultField.fieldDetails.getForeignConstraintDetails();
 				foreignEntityDetails = foreignConstraint.getTargetEntityDetails();
 				
-				//TODO: Take care of mapped/unmapped collection/non-collection relationships
-				
 				proxyEntityCreator = new ProxyEntityCreator(foreignEntityDetails, 
 						repositoryFactory.getRepositoryForEntity((Class)foreignEntityDetails.getEntityType()), value);
 				value = proxyEntityCreator.getProxyEntity();
@@ -679,6 +717,18 @@ public class ConditionQueryBuilder
 			{
 				throw new IllegalArgumentException("An error occurred while parsing record - " + record, ex);
 			}
+		}
+	}
+	
+	@Override
+	public ConditionQueryBuilder clone()
+	{
+		try
+		{
+			return (ConditionQueryBuilder)super.clone();
+		} catch(CloneNotSupportedException ex)
+		{
+			throw new IllegalStateException("An error occurred while cloning", ex);
 		}
 	}
 }

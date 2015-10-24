@@ -14,8 +14,10 @@ import com.fw.persistence.ICrudRepository;
 import com.fw.persistence.IDataStore;
 import com.fw.persistence.Operator;
 import com.fw.persistence.conversion.ConversionService;
+import com.fw.persistence.listeners.EntityEventType;
 import com.fw.persistence.repository.InvalidRepositoryException;
 import com.fw.persistence.repository.PersistenceExecutionContext;
+import com.fw.persistence.repository.RepositoryFactory;
 import com.fw.persistence.repository.annotations.Condition;
 import com.fw.persistence.repository.annotations.ConditionBean;
 
@@ -36,6 +38,28 @@ public abstract class QueryExecutor
 	protected ICrudRepository<?> getCrudRepository(Class<?> entityType)
 	{
 		return persistenceExecutionContext.getRepositoryFactory().getRepositoryForEntity(entityType);
+	}
+	
+	/**
+	 * Notifies entity listeners, if any, about the specified event via event-listener manager 
+	 * @param entity
+	 * @param eventType
+	 */
+	protected void notifyEntityEvent(Object key, Object entity, EntityEventType eventType)
+	{
+		RepositoryFactory factory = persistenceExecutionContext.getRepositoryFactory();
+		factory.getEntityListenerManager().handleEventType(entityDetails.getEntityType(), factory, key, entity, eventType);
+	}
+	
+	/**
+	 * Checks if listener is available for specified event
+	 * @param eventType
+	 * @return
+	 */
+	protected boolean isListenerAvailable(EntityEventType eventType)
+	{
+		RepositoryFactory factory = persistenceExecutionContext.getRepositoryFactory();
+		return factory.getEntityListenerManager().isListenerPresent(entityDetails.getEntityType(), eventType);
 	}
 	
 	public abstract Object execute(IDataStore dataStore, ConversionService conversionService, Object... params);

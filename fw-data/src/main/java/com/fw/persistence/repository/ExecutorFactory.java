@@ -16,6 +16,7 @@ import com.fw.persistence.repository.executors.FinderQueryExecutor;
 import com.fw.persistence.repository.executors.QueryExecutor;
 import com.fw.persistence.repository.executors.QueryExecutorPattern;
 import com.fw.persistence.repository.executors.SaveQueryExecutor;
+import com.fw.persistence.repository.executors.SearchQueryExecutor;
 import com.fw.persistence.repository.executors.UpdateQueryExecutor;
 
 /**
@@ -148,6 +149,7 @@ public class ExecutorFactory
 	{
 		registerExecutor(CountQueryExecutor.class);
 		registerExecutor(FinderQueryExecutor.class);
+		registerExecutor(SearchQueryExecutor.class);
 		registerExecutor(SaveQueryExecutor.class);
 		registerExecutor(DeleteQueryExecutor.class);
 		registerExecutor(UpdateQueryExecutor.class);

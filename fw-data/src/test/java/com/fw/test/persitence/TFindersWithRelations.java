@@ -4,7 +4,6 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.testng.Assert;
-import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
 
 import com.fw.persistence.GenericRepository;
@@ -19,18 +18,9 @@ import com.fw.utils.CommonUtils;
 
 public class TFindersWithRelations extends TestSuiteBase
 {
-	private RepositoryFactory factory;
-	private boolean initalized = false;
-	
-	private void init(RepositoryFactory factory)
+	@Override
+	protected void initFactoryBeforeClass(RepositoryFactory factory)
 	{
-		this.factory = factory;
-		
-		if(initalized)
-		{
-			return;
-		}
-		
 		GenericRepository genericRepository = new GenericRepository(factory);
 		
 		CustomerGroup group1 = new CustomerGroup("Group1", null);
@@ -58,12 +48,10 @@ public class TFindersWithRelations extends TestSuiteBase
 		
 		genericRepository.save(customer1);
 		genericRepository.save(customer2);
-
-		initalized = true;
 	}
-	
-	@AfterClass
-	public void cleanup()
+
+	@Override
+	protected void cleanFactoryAfterClass(RepositoryFactory factory)
 	{
 		//cleanup the tables
 		factory.dropRepository(OrderItem.class);
@@ -80,8 +68,6 @@ public class TFindersWithRelations extends TestSuiteBase
 	@Test(dataProvider = "repositoryFactories")
 	public void testWithParentRelation(RepositoryFactory factory)
 	{
-		init(factory);
-		
 		IOrderRepository repo = factory.getRepository(IOrderRepository.class);
 		
 		List<Order> orders = repo.findOrdersOfCusomer("Customer1");
@@ -106,8 +92,6 @@ public class TFindersWithRelations extends TestSuiteBase
 	@Test(dataProvider = "repositoryFactories")
 	public void testWithChildRelation(RepositoryFactory factory)
 	{
-		init(factory);
-		
 		IOrderRepository repo = factory.getRepository(IOrderRepository.class);
 		
 		List<Order> orders = repo.findOrdersWithItem("soap");
@@ -129,8 +113,6 @@ public class TFindersWithRelations extends TestSuiteBase
 	@Test(dataProvider = "repositoryFactories")
 	public void testWithNestedRelation(RepositoryFactory factory)
 	{
-		init(factory);
-		
 		IOrderRepository repo = factory.getRepository(IOrderRepository.class);
 		
 		List<Order> orders = repo.findOrdersOfCusomerGroup("Group3");
@@ -152,8 +134,6 @@ public class TFindersWithRelations extends TestSuiteBase
 	@Test(dataProvider = "repositoryFactories")
 	public void testWithRelationResult(RepositoryFactory factory)
 	{
-		init(factory);
-		
 		IOrderRepository repo = factory.getRepository(IOrderRepository.class);
 		Assert.assertEquals(repo.findCustomerName(20), "Customer1");
 	}
@@ -161,8 +141,6 @@ public class TFindersWithRelations extends TestSuiteBase
 	@Test(dataProvider = "repositoryFactories")
 	public void testWithMappedJoinRelation(RepositoryFactory factory)
 	{
-		init(factory);
-		
 		ICustomerGroupRepository repo = factory.getRepository(ICustomerGroupRepository.class);
 		
 		List<CustomerGroup> groups = repo.findGroupsOfCusomer("Customer1");

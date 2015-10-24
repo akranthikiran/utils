@@ -45,7 +45,7 @@ public class TableStructure
 				continue;
 			}
 			
-			//if the field is relation field, but not maintained within the curent table
+			//if the field is relation field, but not maintained within the current table
 			if(field.isMappedRelationField() || field.isTableJoined())
 			{
 				continue;

@@ -1,14 +1,11 @@
 package com.fw.test.persitence;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.testng.Assert;
 import org.testng.ITestResult;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.Test;
 
 import com.fw.persistence.UniqueConstraintViolationException;
-import com.fw.persistence.UnsupportedOperationException;
 import com.fw.persistence.repository.RepositoryFactory;
 import com.fw.test.persitence.entity.Employee;
 import com.fw.test.persitence.entity.IEmployeeRepository;
@@ -19,8 +16,6 @@ import com.fw.test.persitence.entity.IEmployeeRepository;
  */
 public class TCrudFunctionality extends TestSuiteBase
 {
-	private static Logger logger = LogManager.getLogger(TCrudFunctionality.class);
-	
 	@AfterMethod
 	public void cleanup(ITestResult result)
 	{
@@ -31,45 +26,6 @@ public class TCrudFunctionality extends TestSuiteBase
 		factory.dropRepository(Employee.class);
 	}
 	
-	/**
-	 * Tests unique constraint validation during insert
-	 */
-	@Test(dataProvider = "repositoryFactories")
-	public void testUniqunessDuringInsert(RepositoryFactory factory)
-	{
-		IEmployeeRepository empRepository = factory.getRepository(IEmployeeRepository.class);
-		
-		Employee emp = new Employee("12345", "kranthi@kk.com", "kranthi", "90232333", 28);
-		empRepository.save(emp);
-		
-		//ensure id is being fetched as part of save
-		Assert.assertTrue(emp.getId() > 0);
-			
-		//create employee with same emp-id
-		Employee emp1 = new Employee("12345", "kiran@kk.com", "kiran", "90231223", 28);
-		
-		try
-		{
-			empRepository.save(emp1);
-			Assert.fail("Employee got saved with duplicate employee id");
-		}catch(UniqueConstraintViolationException ex)
-		{
-			Assert.assertEquals("EmpNo", ex.getConstraintName());
-		}
-		
-		//create employee with same email-id
-		Employee emp2 = new Employee("12346", "kranthi@kk.com", "kiran", "90231223", 28);
-		
-		try
-		{
-			empRepository.save(emp2);
-			Assert.fail("Employee got saved with duplicate email id");
-		}catch(UniqueConstraintViolationException ex)
-		{
-			Assert.assertEquals("EmailId", ex.getConstraintName());
-			Assert.assertTrue(ex.getMessage().contains("kranthi@kk.com"));
-		}
-	}
 
 	/**
 	 * Tests the update functionality

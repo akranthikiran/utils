@@ -14,6 +14,7 @@ import com.fw.persistence.IDataStore;
 import com.fw.persistence.ITransaction;
 import com.fw.persistence.Operator;
 import com.fw.persistence.conversion.ConversionService;
+import com.fw.persistence.listeners.EntityEventType;
 import com.fw.persistence.query.ColumnParam;
 import com.fw.persistence.query.QueryCondition;
 import com.fw.persistence.query.UpdateQuery;
@@ -51,7 +52,7 @@ public class UpdateQueryExecutor extends AbstractPersistQueryExecutor
 		
 		boolean isCoreInterface = ICrudRepository.class.equals(method.getDeclaringClass());
 		
-		if((paramTypes.length == 1 && entityDetails.getEntityType().equals(paramTypes[0])) || isCoreInterface)
+		if( ( paramTypes.length == 1 && entityDetails.getEntityType().equals(paramTypes[0]) ) || isCoreInterface)
 		{
 			entityUpdate = true;
 		}
@@ -127,12 +128,18 @@ public class UpdateQueryExecutor extends AbstractPersistQueryExecutor
 		{
 			throw new NullPointerException("Entity can not be null");
 		}
-			
-		//check if unique constraints are getting violated
-		checkForUniqueConstraints(dataStore, conversionService, entity, true);//TODO: Read only fields should be skipped
 		
-		//check if all foreign parent keys are available
-		checkForForeignConstraints(dataStore, conversionService, entity);
+		if(dataStore.isExplicitUniqueCheckRequired())
+		{
+			//check if unique constraints are getting violated
+			checkForUniqueConstraints(dataStore, conversionService, entity, true);//TODO: Read only fields should be skipped
+		}
+		
+		if(dataStore.isExplicitForeignCheckRequired())
+		{
+			//check if all foreign parent keys are available
+			checkForForeignConstraints(dataStore, conversionService, entity);
+		}
 
 		UpdateQuery query = new UpdateQuery(entityDetails);
 		Object value = null;
@@ -151,7 +158,14 @@ public class UpdateQueryExecutor extends AbstractPersistQueryExecutor
 		
 		query.addCondition(new QueryCondition(null, entityDetails.getIdField().getColumn(), Operator.EQ, entityDetails.getIdField().getValue(entity)));
 		
+		super.notifyEntityEvent(null, entity, EntityEventType.PRE_UPDATE);
+		
 		int res = dataStore.update(query, entityDetails);
+		
+		if(res > 0)
+		{
+			super.notifyEntityEvent(null, entity, EntityEventType.POST_UPDATE);
+		}
 		
 		if(boolean.class.equals(returnType))
 		{
@@ -194,6 +208,7 @@ public class UpdateQueryExecutor extends AbstractPersistQueryExecutor
 			try(ITransaction transaction = dataStore.getTransactionManager().newOrExistingTransaction())
 			{
 				int res = dataStore.update(updateQuery, entityDetails);
+
 				transaction.commit();
 				
 				if(int.class.equals(returnType))

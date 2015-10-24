@@ -3,7 +3,6 @@ package com.fw.test.persitence;
 import java.util.List;
 
 import org.testng.Assert;
-import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
 
 import com.fw.persistence.repository.RepositoryFactory;
@@ -14,18 +13,9 @@ import com.fw.utils.CommonUtils;
 
 public class TDeleteAndUpdate extends TestSuiteBase
 {
-	private RepositoryFactory factory;
-	private boolean initalized = false;
-	
-	private void init(RepositoryFactory factory)
+	@Override
+	protected void initFactoryBeforeClass(RepositoryFactory factory)
 	{
-		this.factory = factory;
-		
-		if(initalized)
-		{
-			return;
-		}
-		
 		IEmployeeRepository repo = factory.getRepository(IEmployeeRepository.class);
 		repo.save(new Employee("1230", "user0@test.com", "user1", "1234560", 20));
 		repo.save(new Employee("1231", "user1@test.com", "user2", "1234561", 25));
@@ -33,12 +23,10 @@ public class TDeleteAndUpdate extends TestSuiteBase
 		repo.save(new Employee("1233", "user3@test.com", "user3", "1234563", 35));
 		repo.save(new Employee("1234", "user4@test.com", "user4", "1234564", 40));
 		repo.save(new Employee("1235", "user5@test.com", "user5", "12345644", 45));
-		
-		initalized = true;
 	}
-	
-	@AfterClass
-	public void cleanup()
+
+	@Override
+	protected void cleanFactoryAfterClass(RepositoryFactory factory)
 	{
 		//cleanup the emp table
 		factory.dropRepository(Employee.class);
@@ -50,8 +38,6 @@ public class TDeleteAndUpdate extends TestSuiteBase
 	@Test(dataProvider = "repositoryFactories")
 	public void testUpdateWithIntReturn(RepositoryFactory factory)
 	{
-		init(factory);
-		
 		IEmployeeRepository repo = factory.getRepository(IEmployeeRepository.class);
 		
 		int count = repo.updateAge("user2", 27);
@@ -69,8 +55,6 @@ public class TDeleteAndUpdate extends TestSuiteBase
 	@Test(dataProvider = "repositoryFactories")
 	public void testUpdateWithBooleanReturn(RepositoryFactory factory)
 	{
-		init(factory);
-		
 		IEmployeeRepository repo = factory.getRepository(IEmployeeRepository.class);
 		
 		boolean res = repo.updatePhone("user0@test.com", "987654");
@@ -90,8 +74,6 @@ public class TDeleteAndUpdate extends TestSuiteBase
 	@Test(dataProvider = "repositoryFactories")
 	public void testDeleteWithBooleanReturn(RepositoryFactory factory)
 	{
-		init(factory);
-		
 		IEmployeeRepository repo = factory.getRepository(IEmployeeRepository.class);
 		
 		Assert.assertEquals(repo.getCountByMailId("user5@test.com"), 1);
@@ -109,8 +91,6 @@ public class TDeleteAndUpdate extends TestSuiteBase
 	@Test(dataProvider = "repositoryFactories")
 	public void testDeleteWithIntReturn(RepositoryFactory factory)
 	{
-		init(factory);
-		
 		IEmployeeRepository repo = factory.getRepository(IEmployeeRepository.class);
 		
 		Assert.assertEquals(repo.getCountByMailId("user4@test.com"), 1);

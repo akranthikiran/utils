@@ -14,6 +14,7 @@ import com.fw.persistence.ICrudRepository;
 import com.fw.persistence.IDataStore;
 import com.fw.persistence.IInternalRepository;
 import com.fw.persistence.InvalidMappingException;
+import com.fw.persistence.listeners.EntityListenerManager;
 
 public class RepositoryFactory
 {
@@ -27,6 +28,11 @@ public class RepositoryFactory
 	private ExecutorFactory executorFactory;
 	
 	private EntityDetailsFactory entityDetailsFactory = new EntityDetailsFactory();
+	
+	/**
+	 * Manager to manage listeners and handling events
+	 */
+	private EntityListenerManager listenerManager = new EntityListenerManager();
 	
 	public IDataStore getDataStore()
 	{
@@ -46,6 +52,20 @@ public class RepositoryFactory
 	public void setCreateTables(boolean createTables)
 	{
 		this.createTables = createTables;
+	}
+	
+	/**
+	 * Registers specified listener container 
+	 * @param listenerContainer
+	 */
+	public void registerListeners(Object listenerContainer)
+	{
+		listenerManager.registerListener(listenerContainer);
+	}
+	
+	public EntityListenerManager getEntityListenerManager()
+	{
+		return listenerManager;
 	}
 	
 	public ExecutorFactory getExecutorFactory()

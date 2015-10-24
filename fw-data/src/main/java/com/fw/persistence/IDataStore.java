@@ -71,6 +71,12 @@ public interface IDataStore
 	 * @return
 	 */
 	public boolean isExplicitForeignCheckRequired();
+	
+	/**
+	 * Indicates whether explicit check for unique constraint is required or not
+	 * @return
+	 */
+	public boolean isExplicitUniqueCheckRequired();
 }
 
 

@@ -1,10 +1,11 @@
-package com.fw.persistence;
+package com.fw.persistence.repository.search;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 import com.fw.persistence.EntityDetails;
+import com.fw.persistence.Operator;
 
 /**
  * Represents a generic select query that can be executed against multiple entities

@@ -1,6 +1,9 @@
 package com.fw.persistence;
 
+import java.util.List;
+
 import com.fw.persistence.repository.annotations.CountFunction;
+import com.fw.persistence.repository.search.SearchQuery;
 
 public interface ICrudRepository<E>
 {
@@ -28,4 +31,11 @@ public interface ICrudRepository<E>
 	 */
 	@CountFunction
 	public long getCount();
+	
+	/**
+	 * Common search method to support dynamic search functionality by default
+	 * @param searchQuery
+	 * @return
+	 */
+	public List<E> search(SearchQuery searchQuery);
 }

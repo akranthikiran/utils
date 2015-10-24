@@ -340,11 +340,11 @@ public class EntityDetailsFactory
 			dbType = (dataTypeMapping != null) ? dataTypeMapping.type() : DataType.UNKNOWN;
 			
 			//flatten the column name
-			mappedColumn = columnName.replaceAll(SPECIAL_CHAR_PATTERN, "");
-			mappedColumn = mappedColumn.toLowerCase();
+			String flatColumnName = columnName.replaceAll(SPECIAL_CHAR_PATTERN, "");
+			flatColumnName = flatColumnName.toLowerCase();
 			
 			//get actual column name from flatten column map
-			mappedColumn = (flattenColumnMap != null) ? flattenColumnMap.get(columnName) : null;
+			mappedColumn = (flattenColumnMap != null) ? flattenColumnMap.get(flatColumnName) : null;
 			
 			//ensure column name is present
 			if(mappedColumn == null)

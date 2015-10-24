@@ -65,22 +65,22 @@ update/insert query methods should accept implicit values for fields
 		This will be helpful in writing methods like deleteInactiveJobs()
 
 
-Cross dependency among entities using foreign keys should be handled
-
 Have validation to disallow reserved words for columns - GEN_UQ_ID
 
-Disable auto checking for unique constraint
 ============================================================================
 ============================================================================
 
-Support for proper foreign keys
-	Ability to support all type of relations
-	Ability to support intermediate table (without need of entity)
 Support to fetch beans - for search queries
-	Return bean property mapping - LOV queries
-
-Support entity based fetch	
-Fix conversion service to use BeanUtils or apache commons
+	Proxy collection fields are not supported currently
+		Need to calculate reverse relation and set it to proxy collection
 
 Entity Listeners
-	 need for extension fields, audit entries
+	 Only Save and update are supported currently
+	 in RDBMS child entities can be auto deleted, so given low priority
+	 
+Migrate annotation parsing logic from column struct to Enity details factory
+
+
+Cusom query support as part of repo
+	 
+	 

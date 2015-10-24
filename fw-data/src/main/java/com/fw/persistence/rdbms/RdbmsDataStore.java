@@ -959,4 +959,13 @@ public class RdbmsDataStore implements IDataStore
 	{
 		return false;
 	}
+
+	/* (non-Javadoc)
+	 * @see com.fw.persistence.IDataStore#isExplicitUniqueCheckRequired()
+	 */
+	@Override
+	public boolean isExplicitUniqueCheckRequired()
+	{
+		return false;
+	}
 }

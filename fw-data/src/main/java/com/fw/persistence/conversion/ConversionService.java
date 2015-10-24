@@ -58,14 +58,14 @@ public class ConversionService
 			return null;
 		}
 		
-		DataTypeMapping fieldConverter = fieldDetails.getField().getAnnotation(DataTypeMapping.class);
+		DataTypeMapping typeMapping = fieldDetails.getField().getAnnotation(DataTypeMapping.class);
 		
-		if(fieldConverter == null)
+		if(typeMapping == null)
 		{
 			return null;
 		}
 		
-		Class<?> converterType = fieldConverter.converterType();
+		Class<?> converterType = typeMapping.converterType();
 		IPersistenceConverter converter = typeToConverter.get(converterType);
 		
 		if(converter != null)

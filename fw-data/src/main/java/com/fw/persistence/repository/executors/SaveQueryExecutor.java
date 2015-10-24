@@ -24,6 +24,7 @@ import com.fw.persistence.JoinTableEntity;
 import com.fw.persistence.Operator;
 import com.fw.persistence.Record;
 import com.fw.persistence.conversion.ConversionService;
+import com.fw.persistence.listeners.EntityEventType;
 import com.fw.persistence.query.ColumnParam;
 import com.fw.persistence.query.QueryCondition;
 import com.fw.persistence.query.QueryResultField;
@@ -77,12 +78,18 @@ public class SaveQueryExecutor extends AbstractPersistQueryExecutor
 		{
 			throw new NullPointerException("Entity can not be null");
 		}
-			
-		//check if unique constraints are getting violated
-		checkForUniqueConstraints(dataStore, conversionService, entity, false);
 		
-		//check if all foreign parent keys are available
-		checkForForeignConstraints(dataStore, conversionService, entity);
+		if(dataStore.isExplicitUniqueCheckRequired())
+		{
+			//check if unique constraints are getting violated
+			checkForUniqueConstraints(dataStore, conversionService, entity, false);
+		}
+		
+		if(dataStore.isExplicitForeignCheckRequired())
+		{
+			//check if all foreign parent keys are available
+			checkForForeignConstraints(dataStore, conversionService, entity);
+		}
 
 		SaveQuery query = new SaveQuery(entityDetails);
 		Object value = null;
@@ -180,6 +187,8 @@ public class SaveQueryExecutor extends AbstractPersistQueryExecutor
 		//save the entity
 		try(ITransaction transaction = dataStore.getTransactionManager().newOrExistingTransaction())
 		{
+			super.notifyEntityEvent(null, entity, EntityEventType.PRE_SAVE);
+
 			int res = dataStore.save(query, entityDetails, idWrapper);
 			
 			//if insertion was successful
@@ -213,6 +222,8 @@ public class SaveQueryExecutor extends AbstractPersistQueryExecutor
 				{
 					saveJoinTableEntry(field, entity, tableJoinedFields.get(field), conversionService, dataStore);
 				}
+				
+				super.notifyEntityEvent(null, entity, EntityEventType.POST_SAVE);
 			}
 			
 			transaction.commit();

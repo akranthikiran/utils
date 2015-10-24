@@ -17,6 +17,7 @@ import com.fw.persistence.IDataStore;
 import com.fw.persistence.ITransaction;
 import com.fw.persistence.PersistenceException;
 import com.fw.persistence.conversion.ConversionService;
+import com.fw.persistence.listeners.EntityEventType;
 import com.fw.persistence.query.ChildrenExistenceQuery;
 import com.fw.persistence.query.QueryCondition;
 import com.fw.persistence.query.DeleteQuery;
@@ -159,6 +160,12 @@ public class DeleteQueryExecutor extends AbstractPersistQueryExecutor
 		
 		try(ITransaction transaction = dataStore.getTransactionManager().newOrExistingTransaction())
 		{
+			if(super.isListenerAvailable(EntityEventType.PRE_DELETE))
+			{
+				//TODO: If listeners are available use delete query conditions to fetch entity ids
+					// and for each entity id invoke listeners
+			}
+			
 			DeleteQuery deleteQuery = new DeleteQuery(entityDetails);
 			conditionQueryBuilder.loadConditionalQuery(deleteQuery, params);
 			
@@ -170,6 +177,12 @@ public class DeleteQueryExecutor extends AbstractPersistQueryExecutor
 
 			int res = dataStore.delete(deleteQuery, entityDetails);
 			
+			if(res > 0 && super.isListenerAvailable(EntityEventType.POST_DELETE))
+			{
+				//TODO: If listeners are available use delete query conditions to fetch entity ids
+					// and for each entity id invoke listeners
+			}
+
 			transaction.commit();
 			
 			if(int.class.equals(returnType))

@@ -19,37 +19,32 @@ import com.fw.persistence.RecordCountMistmatchException;
 import com.fw.persistence.conversion.ConversionService;
 import com.fw.persistence.query.FinderQuery;
 import com.fw.persistence.repository.InvalidRepositoryException;
+import com.fw.persistence.repository.search.SearchCondition;
+import com.fw.persistence.repository.search.SearchQuery;
 
-@QueryExecutorPattern(prefixes = {"find", "fetch"})
-public class FinderQueryExecutor extends AbstractSearchQuery
+@QueryExecutorPattern(prefixes = {"search"})
+public class SearchQueryExecutor extends AbstractSearchQuery
 {
-	private static Logger logger = LogManager.getLogger(FinderQueryExecutor.class);
+	private static Logger logger = LogManager.getLogger(SearchQueryExecutor.class);
 	
 	private ReentrantLock queryLock = new ReentrantLock();
 	
-	public FinderQueryExecutor(Class<?> repositoryType, Method method, EntityDetails entityDetails)
+	public SearchQueryExecutor(Class<?> repositoryType, Method method, EntityDetails entityDetails)
 	{
 		super.repositoryType = repositoryType;
 		super.entityDetails = entityDetails;
 
 		conditionQueryBuilder = new ConditionQueryBuilder(entityDetails);
-		methodDesc = String.format("finder method '%s' of repository - '%s'", method.getName(), repositoryType.getName());
+		methodDesc = String.format("search method '%s' of repository - '%s'", method.getName(), repositoryType.getName());
 
 		Class<?> paramTypes[] = method.getParameterTypes();
 
-		if(paramTypes.length == 0)
+		if(paramTypes.length != 1 && SearchQuery.class.equals(paramTypes[0]))
 		{
-			throw new InvalidRepositoryException("No-parameter finder method '" + method.getName() + "' in repository: " + repositoryType.getName());
+			throw new InvalidRepositoryException("Invalid parameters specified for search method. Search method should have single parameter and it should of type - " + SearchQuery.class.getName());
 		}
 		
 		fetchReturnDetails(method);
-		
-		if(!fetchConditonsByAnnotations(method, true, conditionQueryBuilder, methodDesc, true) && 
-				!fetchConditionsByName(method, conditionQueryBuilder, methodDesc))
-		{
-			throw new InvalidRepositoryException("Failed to determine parameter conditions for finder method '" 
-							+ method.getName() + "' of repository - " + repositoryType.getName());
-		}
 	}
 
 	@SuppressWarnings({"unchecked", "rawtypes"})
@@ -63,9 +58,23 @@ public class FinderQueryExecutor extends AbstractSearchQuery
 		try
 		{
 			FinderQuery finderQuery = new FinderQuery(entityDetails);
-
+			SearchQuery searchQuery = (SearchQuery)params[0];
+			
+			//create a clone so that every time dynamic conditions can be added freshly
+			ConditionQueryBuilder conditionQueryBuilder = this.conditionQueryBuilder.clone();
+			
 			//set the result fields, conditions and tables details on finder query
-			conditionQueryBuilder.loadConditionalQuery(finderQuery, params);
+			List<Object> conditionParams = new ArrayList<>();
+
+			//add conditions to query builder so that they will be validated
+			for(SearchCondition condition : searchQuery.getConditions())
+			{
+				conditionQueryBuilder.addCondition(condition.getOperator(), conditionParams.size(), null, condition.getField(), methodDesc);
+				conditionParams.add(condition.getValue());
+			}
+			
+			//load condition values
+			conditionQueryBuilder.loadConditionalQuery(finderQuery, conditionParams.toArray());
 			
 			//execute the query and fetch records
 			List<Record> records = dataStore.executeFinder(finderQuery, entityDetails);
